@@ -1,14 +1,14 @@
 [package]
-name = "eframe_template"
+name = "scheme_submission"
 version = "0.1.0"
-authors = ["Emil Ernerfeldt <emil.ernerfeldt@gmail.com>"]
+authors = ["Reto Trappitsch <reto@galactic-forensics.space>"]
 edition = "2021"
 rust-version = "1.72"
 
 
 [dependencies]
-egui = "0.27.0"
-eframe = { version = "0.27.0", default-features = false, features = [
+egui = "0.27.2"
+eframe = { version = "0.27.2", default-features = false, features = [
     "accesskit",     # Make egui comptaible with screen readers. NOTE: adds a lot of dependencies.
     "default_fonts", # Embed the default egui fonts.
     "glow",          # Use the glow rendering backend. Alternative: "wgpu".
@@ -18,6 +18,8 @@ log = "0.4"
 
 # You only need serde if you want app persistence:
 serde = { version = "1", features = ["derive"] }
+strum = "0.26.2"
+strum_macros = "0.26.2"
 
 # native:
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
