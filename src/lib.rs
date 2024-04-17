@@ -118,7 +118,6 @@ pub enum Elements {
     Hs,
 }
 
-
 impl Elements {
     pub fn ip(&self) -> f64 {
         match self {
@@ -244,7 +243,7 @@ pub struct GroundState {
 pub enum Lasers {
     TiSa,
     Dye,
-    Both
+    Both,
 }
 
 impl Lasers {
@@ -269,6 +268,55 @@ impl TransitionUnit {
             TransitionUnit::NM => "nm".to_string(),
             TransitionUnit::CM1 => "1/cm".to_string(),
         }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, serde::Deserialize, serde::Serialize)]
+pub enum SaturationCurveUnit {
+    WCM2,
+    W,
+}
+
+impl SaturationCurveUnit {
+    pub fn to_string(&self) -> String {
+        match self {
+            SaturationCurveUnit::WCM2 => "W/cm²".to_string(),
+            SaturationCurveUnit::W => "W".to_string(),
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, serde::Deserialize, serde::Serialize)]
+pub struct SaturationCurve {
+    pub title: String,
+    pub notes: String,
+    pub units: SaturationCurveUnit,
+    pub xdat: Vec<f64>,
+    pub xdat_unc: Option<Vec<f64>>,
+    pub ydat: Vec<f64>,
+    pub ydat_unc: Option<Vec<f64>>,
+}
+
+impl SaturationCurve {
+    /// Create a new instance of Saturation curve or return an error if not successful.
+    pub fn new_from_parts(
+        title: &String,
+        notes: &String,
+        units: &SaturationCurveUnit,
+        xdat: &String,
+        xunc: &String,
+        ydat: &String,
+        yunc: &String,
+    ) -> Result<Self, String> {
+        Ok(Self {
+            title: title.to_owned(),
+            notes: notes.to_owned(),
+            units: SaturationCurveUnit::W,
+            xdat: Vec::new(),
+            xdat_unc: None,
+            ydat: Vec::new(),
+            ydat_unc: None,
+        })
     }
 }
 

@@ -1,15 +1,17 @@
 use egui::RichText;
 use strum::IntoEnumIterator;
 
-use crate::{Elements, GroundState, Lasers, Transition, TransitionUnit};
+use crate::{
+    Elements, GroundState, Lasers, SaturationCurve, SaturationCurveUnit, Transition, TransitionUnit,
+};
 
-
-/// We derive Deserialize/Serialize so we can persist app state on shutdown.
+/// We derive Deserialize/Serialize to persist app state on shutdown.
 #[derive(serde::Deserialize, serde::Serialize)]
 #[serde(default)] // if we add new fields, give them default values when deserializing old state
 pub struct TemplateApp {
     notes: String,
     references: Vec<String>,
+    saturation_curves: Vec<SaturationCurve>,
     scheme_element: Elements,
     scheme_gs: GroundState,
     scheme_ip_term_symbol: String,
@@ -19,7 +21,23 @@ pub struct TemplateApp {
     #[serde(skip)]
     reference_entry: String,
     #[serde(skip)]
+    sat_tmp_title: String,
+    #[serde(skip)]
+    sat_tmp_notes: String,
+    #[serde(skip)]
+    sat_tmp_unit: SaturationCurveUnit,
+    #[serde(skip)]
+    sat_tmp_xdat: String,
+    #[serde(skip)]
+    sat_tmp_xdat_unc: String,
+    #[serde(skip)]
+    sat_tmp_ydat: String,
+    #[serde(skip)]
+    sat_tmp_ydat_unc: String,
+    #[serde(skip)]
     error_reference: String,
+    #[serde(skip)]
+    error_saturation: String,
 }
 
 impl Default for TemplateApp {
@@ -28,6 +46,7 @@ impl Default for TemplateApp {
             notes: String::new(),
             references: Vec::new(),
             reference_entry: String::new(),
+            saturation_curves: Vec::new(),
             scheme_element: Elements::H,
             scheme_gs: GroundState {
                 level: "0".to_owned(),
@@ -45,7 +64,15 @@ impl Default for TemplateApp {
                 Transition::new_empty(),
             ],
             scheme_unit: TransitionUnit::CM1,
+            sat_tmp_title: String::new(),
+            sat_tmp_notes: String::new(),
+            sat_tmp_unit: SaturationCurveUnit::WCM2,
+            sat_tmp_xdat: String::new(),
+            sat_tmp_xdat_unc: String::new(),
+            sat_tmp_ydat: String::new(),
+            sat_tmp_ydat_unc: String::new(),
             error_reference: String::new(),
+            error_saturation: String::new(),
         }
     }
 }
@@ -82,16 +109,15 @@ impl eframe::App for TemplateApp {
 
         egui::CentralPanel::default().show(ctx, |ui| {
             // The central panel the region left after adding TopPanel's and SidePanel's
-            ui.heading(
-                RichText::new("Resonance Ionization Scheme Submission")
-                    .strong(),
-            );
+            ui.heading(RichText::new("Resonance Ionization Scheme Submission").strong());
             ui.add_space(VERTICAL_SPACE);
 
             ui.label(RichText::new(INTRO_MESSAGE).strong());
             ui.add_space(VERTICAL_SPACE);
 
-            ui.collapsing("Usage", |ui| { ui.label(USAGE_MESSAGE_GENERAL); });
+            ui.collapsing("Usage", |ui| {
+                ui.label(USAGE_MESSAGE_GENERAL);
+            });
             ui.add_space(VERTICAL_SPACE);
 
             ui.separator();
@@ -100,8 +126,9 @@ impl eframe::App for TemplateApp {
             ui.heading(RichText::new("Notes").strong());
             ui.add_space(VERTICAL_SPACE);
 
-            ui.text_edit_multiline(&mut self.notes)
-                .on_hover_text("Add any notes for your scheme here. You can use Markdown commands for formatting.");
+            ui.text_edit_multiline(&mut self.notes).on_hover_text(
+                "Add any notes for your scheme here. You can use Markdown commands for formatting.",
+            );
             ui.add_space(VERTICAL_SPACE);
 
             ui.separator();
@@ -110,7 +137,9 @@ impl eframe::App for TemplateApp {
             ui.heading(RichText::new("Scheme").strong());
             ui.add_space(VERTICAL_SPACE);
 
-            ui.collapsing("Usage Scheme", |ui| { ui.label(USAGE_MESSAGE_SCHEME); });
+            ui.collapsing("Usage Scheme", |ui| {
+                ui.label(USAGE_MESSAGE_SCHEME);
+            });
             ui.add_space(VERTICAL_SPACE);
 
             // Element
@@ -130,8 +159,16 @@ impl eframe::App for TemplateApp {
             // Units
             ui.horizontal(|ui| {
                 ui.label("Unit:");
-                ui.radio_value(&mut self.scheme_unit, TransitionUnit::CM1, TransitionUnit::CM1.to_string());
-                ui.radio_value(&mut self.scheme_unit, TransitionUnit::NM, TransitionUnit::NM.to_string());
+                ui.radio_value(
+                    &mut self.scheme_unit,
+                    TransitionUnit::CM1,
+                    TransitionUnit::CM1.to_string(),
+                );
+                ui.radio_value(
+                    &mut self.scheme_unit,
+                    TransitionUnit::NM,
+                    TransitionUnit::NM.to_string(),
+                );
             });
             ui.add_space(VERTICAL_SPACE);
 
@@ -149,13 +186,15 @@ impl eframe::App for TemplateApp {
                     ui.end_row();
 
                     ui.label("Ground state (1/cm):");
-                    ui.add(egui::TextEdit::singleline(&mut self.scheme_gs.level)
-                        .desired_width(TEXT_INPUT_WIDTH)
-                        .horizontal_align(egui::Align::RIGHT)
+                    ui.add(
+                        egui::TextEdit::singleline(&mut self.scheme_gs.level)
+                            .desired_width(TEXT_INPUT_WIDTH)
+                            .horizontal_align(egui::Align::RIGHT),
                     );
-                    ui.add(egui::TextEdit::singleline(&mut self.scheme_gs.term_symbol)
-                        .desired_width(TEXT_INPUT_WIDTH)
-                        .horizontal_align(egui::Align::RIGHT)
+                    ui.add(
+                        egui::TextEdit::singleline(&mut self.scheme_gs.term_symbol)
+                            .desired_width(TEXT_INPUT_WIDTH)
+                            .horizontal_align(egui::Align::RIGHT),
                     );
                     ui.end_row();
 
@@ -167,28 +206,32 @@ impl eframe::App for TemplateApp {
                             unit = self.scheme_unit.to_string();
                         }
                         ui.label(format!("Step {} ({}):", it + 1, unit));
-                        ui.add(egui::TextEdit::singleline(&mut trans.level)
-                            .desired_width(TEXT_INPUT_WIDTH)
-                            .horizontal_align(egui::Align::RIGHT)
+                        ui.add(
+                            egui::TextEdit::singleline(&mut trans.level)
+                                .desired_width(TEXT_INPUT_WIDTH)
+                                .horizontal_align(egui::Align::RIGHT),
                         );
-                        ui.add(egui::TextEdit::singleline(&mut trans.term_symbol)
-                            .desired_width(TEXT_INPUT_WIDTH)
-                            .horizontal_align(egui::Align::RIGHT)
+                        ui.add(
+                            egui::TextEdit::singleline(&mut trans.term_symbol)
+                                .desired_width(TEXT_INPUT_WIDTH)
+                                .horizontal_align(egui::Align::RIGHT),
                         );
-                        ui.add(egui::TextEdit::singleline(&mut trans.transition_strength)
-                            .desired_width(TEXT_INPUT_WIDTH)
-                            .horizontal_align(egui::Align::RIGHT)
+                        ui.add(
+                            egui::TextEdit::singleline(&mut trans.transition_strength)
+                                .desired_width(TEXT_INPUT_WIDTH)
+                                .horizontal_align(egui::Align::RIGHT),
                         );
                         ui.checkbox(&mut trans.low_lying, "Low-lying");
                         ui.checkbox(&mut trans.forbidden, "Forbidden");
                         ui.end_row();
-                    };
+                    }
 
                     ui.label("IP (1/cm):");
                     ui.label(format!("{0:.3}", self.scheme_element.ip()));
-                    ui.add(egui::TextEdit::singleline(&mut self.scheme_ip_term_symbol)
-                        .desired_width(TEXT_INPUT_WIDTH)
-                        .horizontal_align(egui::Align::RIGHT)
+                    ui.add(
+                        egui::TextEdit::singleline(&mut self.scheme_ip_term_symbol)
+                            .desired_width(TEXT_INPUT_WIDTH)
+                            .horizontal_align(egui::Align::RIGHT),
                     );
                     ui.end_row();
                 });
@@ -200,11 +243,127 @@ impl eframe::App for TemplateApp {
                 egui::ComboBox::from_id_source("Lasers")
                     .selected_text(self.scheme_lasers.to_string())
                     .show_ui(ui, |ui| {
-                        ui.selectable_value(&mut self.scheme_lasers, Lasers::TiSa, Lasers::TiSa.to_string());
-                        ui.selectable_value(&mut self.scheme_lasers, Lasers::Dye, Lasers::Dye.to_string());
-                        ui.selectable_value(&mut self.scheme_lasers, Lasers::Both, Lasers::Both.to_string());
+                        ui.selectable_value(
+                            &mut self.scheme_lasers,
+                            Lasers::TiSa,
+                            Lasers::TiSa.to_string(),
+                        );
+                        ui.selectable_value(
+                            &mut self.scheme_lasers,
+                            Lasers::Dye,
+                            Lasers::Dye.to_string(),
+                        );
+                        ui.selectable_value(
+                            &mut self.scheme_lasers,
+                            Lasers::Both,
+                            Lasers::Both.to_string(),
+                        );
                     });
             });
+            ui.add_space(VERTICAL_SPACE);
+
+            ui.separator();
+            ui.add_space(VERTICAL_SPACE);
+
+            ui.heading(RichText::new("Saturation curves").strong());
+            ui.add_space(VERTICAL_SPACE);
+
+            ui.collapsing("Usage Saturation Curves", |ui| {
+                ui.label(USAGE_MESSAGE_SATURATION);
+            });
+            ui.add_space(VERTICAL_SPACE);
+
+            ui.horizontal(|ui| {
+                ui.label("Title:");
+                ui.text_edit_singleline(&mut self.sat_tmp_title);
+            });
+            ui.add_space(VERTICAL_SPACE);
+
+            ui.horizontal(|ui| {
+                ui.label("Unit x-axis:");
+                ui.radio_value(
+                    &mut self.sat_tmp_unit,
+                    SaturationCurveUnit::WCM2,
+                    SaturationCurveUnit::WCM2.to_string(),
+                );
+                ui.radio_value(
+                    &mut self.sat_tmp_unit,
+                    SaturationCurveUnit::W,
+                    SaturationCurveUnit::W.to_string(),
+                );
+            });
+            ui.add_space(VERTICAL_SPACE);
+
+            ui.horizontal(|ui| {
+                ui.label("Notes:");
+                ui.text_edit_multiline(&mut self.sat_tmp_notes);
+            });
+            ui.add_space(VERTICAL_SPACE);
+
+            egui::Grid::new("sat_curve_grid")
+                .min_col_width(COL_MIN_WIDTH)
+                .striped(false)
+                .show(ui, |ui| {
+                    ui.label("x-data");
+                    ui.text_edit_singleline(&mut self.sat_tmp_xdat);
+
+                    ui.label("x-data uncertainty");
+                    ui.text_edit_singleline(&mut self.sat_tmp_xdat_unc);
+                    ui.end_row();
+
+                    ui.label("y-data");
+                    ui.text_edit_singleline(&mut self.sat_tmp_ydat);
+
+                    ui.label("y-data uncertainty");
+                    ui.text_edit_singleline(&mut self.sat_tmp_ydat_unc);
+                    ui.end_row();
+                });
+            ui.add_space(VERTICAL_SPACE);
+
+            ui.horizontal(|ui| {
+                if ui.button("Add").clicked() {
+                    match SaturationCurve::new_from_parts(
+                        &self.sat_tmp_title,
+                        &self.sat_tmp_notes,
+                        &self.sat_tmp_unit,
+                        &self.sat_tmp_xdat,
+                        &self.sat_tmp_xdat_unc,
+                        &self.sat_tmp_ydat,
+                        &self.sat_tmp_ydat_unc,
+                    ) {
+                        Ok(sc) => self.saturation_curves.push(sc),
+                        Err(err) => self.error_saturation = err,
+                    };
+                };
+                ui.label(
+                    RichText::new(&self.error_saturation)
+                        .color(egui::Color32::RED)
+                        .strong(),
+                );
+            });
+            ui.add_space(VERTICAL_SPACE);
+
+            ui.label("List of existing saturation curve entries:");
+            ui.add_space(VERTICAL_SPACE);
+
+            egui::Grid::new("saturation_curve_table")
+                .striped(true)
+                .min_col_width(COL_MIN_WIDTH)
+                .show(ui, |ui| {
+                    ui.label("Title of curve");
+                    ui.label("Delete entry?");
+                    ui.end_row();
+                    let loop_ref = self.saturation_curves.clone();
+                    let reference_iter = loop_ref.clone();
+                    for val in reference_iter {
+                        ui.label(val.title.clone());
+                        if ui.button("Delete").clicked() {
+                            let index = loop_ref.iter().position(|x| x == &val).unwrap();
+                            self.references.remove(index);
+                        }
+                        ui.end_row();
+                    }
+                });
             ui.add_space(VERTICAL_SPACE);
 
             ui.separator();
@@ -213,20 +372,23 @@ impl eframe::App for TemplateApp {
             ui.heading(RichText::new("References").strong());
             ui.add_space(VERTICAL_SPACE);
 
-            ui.collapsing("Usage References", |ui| { ui.label(USAGE_MESSAGE_REFERENCE); });
+            ui.collapsing("Usage References", |ui| {
+                ui.label(USAGE_MESSAGE_REFERENCE);
+            });
             ui.add_space(VERTICAL_SPACE);
 
             ui.horizontal(|ui| {
                 ui.label("Enter DOI:");
                 ui.text_edit_singleline(&mut self.reference_entry)
                     .on_hover_text("Enter the DOI of the reference here.");
-                if ui.button("Add")
+                if ui
+                    .button("Add")
                     .on_hover_text("Add the current reference to the list.")
-                    .clicked() {
+                    .clicked()
+                {
                     let tmp = self.reference_entry.clone();
                     if !tmp.is_empty() {
-                        if self.references.contains(&tmp)
-                        {
+                        if self.references.contains(&tmp) {
                             self.error_reference = "Reference already in list.".to_owned();
                         } else {
                             self.references.push(self.reference_entry.clone());
@@ -237,12 +399,17 @@ impl eframe::App for TemplateApp {
                         self.error_reference = "Reference is empty.".to_owned();
                     };
                 };
-                ui.label(RichText::new(&self.error_reference).color(egui::Color32::RED).strong());
+                ui.label(
+                    RichText::new(&self.error_reference)
+                        .color(egui::Color32::RED)
+                        .strong(),
+                );
             });
             ui.add_space(VERTICAL_SPACE);
 
             ui.label("List of existing references:");
             ui.add_space(VERTICAL_SPACE);
+
             egui::Grid::new("reference_table")
                 .striped(true)
                 .min_col_width(COL_MIN_WIDTH)
@@ -261,7 +428,7 @@ impl eframe::App for TemplateApp {
                         ui.end_row();
                     }
                 });
-
+            ui.add_space(VERTICAL_SPACE);
 
             ui.separator();
 
@@ -280,7 +447,10 @@ impl eframe::App for TemplateApp {
 
             ui.with_layout(egui::Layout::bottom_up(egui::Align::LEFT), |ui| {
                 powered_by_egui_and_eframe(ui);
-                ui.hyperlink_to("Source code", "https://github.com/RIMS-Code/rimsdb_scheme_submission");
+                ui.hyperlink_to(
+                    "Source code",
+                    "https://github.com/RIMS-Code/rimsdb_scheme_submission",
+                );
                 egui::warn_if_debug_build(ui);
             });
         });
@@ -318,6 +488,17 @@ levels, optional term symbols, transmission strengths (in 1/s), \
 and whether the level is a low-lying level or if the transition is forbidden. \
 Finally, select the lasers that were used for this scheme. \
 Further information can always be provided in the notes.";
+
+const USAGE_MESSAGE_SATURATION: &str = "To add a saturation curve, you need to add at least \
+a title, the unit used for the x-values, x- and y-data. Optionally, you can provide notes and \
+uncertainties for the x- and y-data.\n\
+Please include the wavelength of the transition and/or a clear identifier which transition is described \
+in the title of the submission. \
+If you choose units in Watts, please make sure that you include the approximate beam size for the \
+laser is included in the notes. \
+Finally, data can be pasted, e.g., from Excel, into the individual field. \
+Each field needs to contain the same number of values. \
+Values can be separated by comma, semicolon, or space.";
 
 const USAGE_MESSAGE_REFERENCE: &str = "Please provide the DOI of the reference that you \
 want to use for this scheme. You can add multiple references. \
