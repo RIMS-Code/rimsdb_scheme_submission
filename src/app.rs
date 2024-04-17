@@ -8,17 +8,26 @@ use crate::{Elements, GroundState, Lasers, Transition, TransitionUnit};
 #[derive(serde::Deserialize, serde::Serialize)]
 #[serde(default)] // if we add new fields, give them default values when deserializing old state
 pub struct TemplateApp {
+    notes: String,
+    references: Vec<String>,
     scheme_element: Elements,
     scheme_gs: GroundState,
     scheme_ip_term_symbol: String,
     scheme_lasers: Lasers,
     scheme_transitions: [Transition; 7],
     scheme_unit: TransitionUnit,
+    #[serde(skip)]
+    reference_entry: String,
+    #[serde(skip)]
+    error_reference: String,
 }
 
 impl Default for TemplateApp {
     fn default() -> Self {
         Self {
+            notes: String::new(),
+            references: Vec::new(),
+            reference_entry: String::new(),
             scheme_element: Elements::H,
             scheme_gs: GroundState {
                 level: "0".to_owned(),
@@ -36,6 +45,7 @@ impl Default for TemplateApp {
                 Transition::new_empty(),
             ],
             scheme_unit: TransitionUnit::CM1,
+            error_reference: String::new(),
         }
     }
 }
@@ -82,6 +92,16 @@ impl eframe::App for TemplateApp {
             ui.add_space(VERTICAL_SPACE);
 
             ui.collapsing("Usage", |ui| { ui.label(USAGE_MESSAGE_GENERAL); });
+            ui.add_space(VERTICAL_SPACE);
+
+            ui.separator();
+            ui.add_space(VERTICAL_SPACE);
+
+            ui.heading(RichText::new("Notes").strong());
+            ui.add_space(VERTICAL_SPACE);
+
+            ui.text_edit_multiline(&mut self.notes)
+                .on_hover_text("Add any notes for your scheme here. You can use Markdown commands for formatting.");
             ui.add_space(VERTICAL_SPACE);
 
             ui.separator();
@@ -188,6 +208,62 @@ impl eframe::App for TemplateApp {
             ui.add_space(VERTICAL_SPACE);
 
             ui.separator();
+            ui.add_space(VERTICAL_SPACE);
+
+            ui.heading(RichText::new("References").strong());
+            ui.add_space(VERTICAL_SPACE);
+
+            ui.collapsing("Usage References", |ui| { ui.label(USAGE_MESSAGE_REFERENCE); });
+            ui.add_space(VERTICAL_SPACE);
+
+            ui.horizontal(|ui| {
+                ui.label("Enter DOI:");
+                ui.text_edit_singleline(&mut self.reference_entry)
+                    .on_hover_text("Enter the DOI of the reference here.");
+                if ui.button("Add")
+                    .on_hover_text("Add the current reference to the list.")
+                    .clicked() {
+                    let tmp = self.reference_entry.clone();
+                    if !tmp.is_empty() {
+                        if self.references.contains(&tmp)
+                        {
+                            self.error_reference = "Reference already in list.".to_owned();
+                        } else {
+                            self.references.push(self.reference_entry.clone());
+                            self.reference_entry.clear();
+                            self.error_reference.clear();
+                        }
+                    } else {
+                        self.error_reference = "Reference is empty.".to_owned();
+                    };
+                };
+                ui.label(RichText::new(&self.error_reference).color(egui::Color32::RED).strong());
+            });
+            ui.add_space(VERTICAL_SPACE);
+
+            ui.label("List of existing references:");
+            ui.add_space(VERTICAL_SPACE);
+            egui::Grid::new("reference_table")
+                .striped(true)
+                .min_col_width(COL_MIN_WIDTH)
+                .show(ui, |ui| {
+                    ui.label("DOI");
+                    ui.label("Delete entry?");
+                    ui.end_row();
+                    let loop_ref = self.references.clone();
+                    let reference_iter = loop_ref.clone();
+                    for val in reference_iter {
+                        ui.label(val.clone());
+                        if ui.button("Delete").clicked() {
+                            let index = loop_ref.iter().position(|x| x == &val).unwrap();
+                            self.references.remove(index);
+                        }
+                        ui.end_row();
+                    }
+                });
+
+
+            ui.separator();
 
             ui.horizontal(|ui| {
                 if ui.button("Submit via GitHub").clicked() {
@@ -195,6 +271,7 @@ impl eframe::App for TemplateApp {
                 }
                 if ui.button("Submit via E-Mail").clicked() {
                     println!("Submit scheme via e-mail.");
+                    println!("{:?}", self.references)
                 }
                 if ui.add(egui::Button::new("Clear all")).clicked() {
                     *self = Default::default();
@@ -236,11 +313,15 @@ Detailed information for each segment are given in the individual sections below
 
 const USAGE_MESSAGE_SCHEME: &str = "The scheme is the main part of the submission. \
 It should contain at a minimum the element, the ground state, as well as one or more transitions.\n \
-First select the units that you would like to use (nm or cm<sup>-1</sup>). Then fill out the \
-levels, optional term symbols, transmission strengths (in s<sup>-1</sup>), \
+First select the units that you would like to use (nm or 1/cm). Then fill out the \
+levels, optional term symbols, transmission strengths (in 1/s), \
 and whether the level is a low-lying level or if the transition is forbidden. \
 Finally, select the lasers that were used for this scheme. \
 Further information can always be provided in the notes.";
+
+const USAGE_MESSAGE_REFERENCE: &str = "Please provide the DOI of the reference that you \
+want to use for this scheme. You can add multiple references. \
+To do so, enter a DOI, click the 'Add' button, and repeat the process.";
 
 // const USAGE_MESSAGE_SATURATION: &str = "The saturation part of the submission is optional. \
 // Please select the units that you would like to use. Then fill out the ...";
