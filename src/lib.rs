@@ -1,4 +1,4 @@
-#![warn(clippy::all, rust_2018_idioms)]
+use std::fmt;
 
 use strum_macros::EnumIter;
 
@@ -246,12 +246,12 @@ pub enum Lasers {
     Both,
 }
 
-impl Lasers {
-    pub fn to_string(&self) -> String {
+impl fmt::Display for Lasers {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Lasers::TiSa => "Ti:Sa".to_string(),
-            Lasers::Dye => "Dye".to_string(),
-            Lasers::Both => "Ti:Sa and Dye".to_string(),
+            Lasers::TiSa => write!(f, "Ti:Sa"),
+            Lasers::Dye => write!(f, "Dye"),
+            Lasers::Both => write!(f, "Ti:Sa and Dye"),
         }
     }
 }
@@ -262,11 +262,11 @@ pub enum TransitionUnit {
     CM1,
 }
 
-impl TransitionUnit {
-    pub fn to_string(&self) -> String {
+impl fmt::Display for TransitionUnit {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            TransitionUnit::NM => "nm".to_string(),
-            TransitionUnit::CM1 => "1/cm".to_string(),
+            TransitionUnit::NM => write!(f, "nm"),
+            TransitionUnit::CM1 => write!(f, "cm¯¹"),
         }
     }
 }
@@ -277,11 +277,11 @@ pub enum SaturationCurveUnit {
     W,
 }
 
-impl SaturationCurveUnit {
-    pub fn to_string(&self) -> String {
+impl fmt::Display for SaturationCurveUnit {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            SaturationCurveUnit::WCM2 => "W/cm²".to_string(),
-            SaturationCurveUnit::W => "W".to_string(),
+            SaturationCurveUnit::WCM2 => write!(f, "W/cm²"),
+            SaturationCurveUnit::W => write!(f, "W"),
         }
     }
 }
@@ -300,22 +300,53 @@ pub struct SaturationCurve {
 impl SaturationCurve {
     /// Create a new instance of Saturation curve or return an error if not successful.
     pub fn new_from_parts(
-        title: &String,
-        notes: &String,
+        title: &str,
+        notes: &str,
         units: &SaturationCurveUnit,
-        xdat: &String,
-        xunc: &String,
-        ydat: &String,
-        yunc: &String,
+        xdat: &str,
+        xunc: &str,
+        ydat: &str,
+        yunc: &str,
     ) -> Result<Self, String> {
+        if xdat.is_empty() {
+            return Err("Please enter some data.".to_string());
+        }
+
+        let xdat = data_string_to_vec_f64(xdat, "x")?;
+        let ydat = data_string_to_vec_f64(ydat, "y")?;
+
+        if xdat.len() != ydat.len() {
+            return Err("X and Y data lengths do not match.".to_string());
+        }
+
+        let xdat_unc: Option<Vec<f64>> = if xunc.is_empty() {
+            None
+        } else {
+            Some(data_string_to_vec_f64(xunc, "x uncertainty")?)
+        };
+
+        if xdat_unc.is_some() && xdat_unc.as_ref().unwrap().len() != xdat.len() {
+            return Err("Uncertainty x data length does not match the x data length.".to_string());
+        }
+
+        let ydat_unc: Option<Vec<f64>> = if yunc.is_empty() {
+            None
+        } else {
+            Some(data_string_to_vec_f64(yunc, "y uncertainty")?)
+        };
+
+        if ydat_unc.is_some() && ydat_unc.as_ref().unwrap().len() != ydat.len() {
+            return Err("Uncertainty y data length does not match the y data length.".to_string());
+        }
+
         Ok(Self {
             title: title.to_owned(),
             notes: notes.to_owned(),
-            units: SaturationCurveUnit::W,
-            xdat: Vec::new(),
-            xdat_unc: None,
-            ydat: Vec::new(),
-            ydat_unc: None,
+            units: units.clone(),
+            xdat,
+            xdat_unc,
+            ydat,
+            ydat_unc,
         })
     }
 }
@@ -339,4 +370,27 @@ impl Transition {
             forbidden: false,
         }
     }
+}
+
+/// Take a data string and split it into a vector of strings according to a list of delimiters.
+fn split_data_string(data: &str) -> Vec<String> {
+    let xsplit: Vec<String> = data
+        .split(&[' ', ',', ':', '-', '\t', '\n', '\r'])
+        .filter(|&r| !r.is_empty())
+        .map(|r| r.to_string())
+        .collect();
+    xsplit
+}
+
+/// Take a data string and transfer it to a f64 Vector.
+fn data_string_to_vec_f64(data: &str, name: &str) -> Result<Vec<f64>, String> {
+    let mut x_data: Vec<f64> = Vec::new();
+    let xsplit = split_data_string(data);
+    for xd in xsplit {
+        match xd.parse::<f64>() {
+            Ok(x) => x_data.push(x),
+            Err(_) => return Err(format!("None-numeric value fount in {} data.", name).to_string()),
+        };
+    }
+    Ok(x_data)
 }

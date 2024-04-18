@@ -94,11 +94,6 @@ impl TemplateApp {
 }
 
 impl eframe::App for TemplateApp {
-    /// Called by the framework to save state before shutdown.
-    fn save(&mut self, storage: &mut dyn eframe::Storage) {
-        eframe::set_value(storage, eframe::APP_KEY, self);
-    }
-
     /// Called each time the UI needs repainting, which may be many times per second.
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
@@ -182,12 +177,12 @@ impl eframe::App for TemplateApp {
                         ui.label("");
                         ui.label("Level");
                         ui.label("Term Symbol");
-                        ui.label("Transition strength (1/s)");
+                        ui.label("Transition strength (s¯¹)");
                         ui.label("Manifold");
                         ui.label("Properties");
                         ui.end_row();
 
-                        ui.label("Ground state (1/cm):");
+                        ui.label("Ground state (cm¯¹):");
                         ui.add(
                             egui::TextEdit::singleline(&mut self.scheme_gs.level)
                                 .desired_width(TEXT_INPUT_WIDTH)
@@ -201,12 +196,10 @@ impl eframe::App for TemplateApp {
                         ui.end_row();
 
                         for (it, trans) in self.scheme_transitions.iter_mut().enumerate() {
-                            let unit: String;
-                            if trans.low_lying {
-                                unit = "1/cm".to_owned();
-                            } else {
-                                unit = self.scheme_unit.to_string();
-                            }
+                            let unit = match trans.low_lying {
+                                true => TransitionUnit::CM1.to_string(),
+                                false => self.scheme_unit.to_string(),
+                            };
                             ui.label(format!("Step {} ({}):", it + 1, unit));
                             ui.add(
                                 egui::TextEdit::singleline(&mut trans.level)
@@ -228,7 +221,7 @@ impl eframe::App for TemplateApp {
                             ui.end_row();
                         }
 
-                        ui.label("IP (1/cm):");
+                        ui.label("IP (cm¯¹):");
                         ui.label(format!("{0:.3}", self.scheme_element.ip()));
                         ui.add(
                             egui::TextEdit::singleline(&mut self.scheme_ip_term_symbol)
@@ -306,42 +299,76 @@ impl eframe::App for TemplateApp {
                     .min_col_width(COL_MIN_WIDTH)
                     .striped(false)
                     .show(ui, |ui| {
-                        ui.label("x-data");
-                        ui.text_edit_singleline(&mut self.sat_tmp_xdat);
+                        let x_dat_name = match self.sat_tmp_unit {
+                            SaturationCurveUnit::WCM2 => "Irradiance",
+                            SaturationCurveUnit::W => "Power",
+                        };
+                        ui.label(format!("{} (x-) data", x_dat_name));
+                        ui.add(egui::TextEdit::singleline(&mut self.sat_tmp_xdat)
+                            .desired_width(TEXT_INPUT_WIDTH));
 
                         ui.label("x-data uncertainty");
-                        ui.text_edit_singleline(&mut self.sat_tmp_xdat_unc);
+                        ui.add(egui::TextEdit::singleline(&mut self.sat_tmp_xdat_unc)
+                            .desired_width(TEXT_INPUT_WIDTH));
                         ui.end_row();
 
-                        ui.label("y-data");
-                        ui.text_edit_singleline(&mut self.sat_tmp_ydat);
+                        ui.label("Signal (y-) data");
+                        ui.add(egui::TextEdit::singleline(&mut self.sat_tmp_ydat)
+                            .desired_width(TEXT_INPUT_WIDTH));
 
                         ui.label("y-data uncertainty");
-                        ui.text_edit_singleline(&mut self.sat_tmp_ydat_unc);
+                        ui.add(egui::TextEdit::singleline(&mut self.sat_tmp_ydat_unc)
+                            .desired_width(TEXT_INPUT_WIDTH));
                         ui.end_row();
                     });
                 ui.add_space(VERTICAL_SPACE);
 
                 ui.horizontal(|ui| {
                     if ui.button("Add").clicked() {
-                        match SaturationCurve::new_from_parts(
-                            &self.sat_tmp_title,
-                            &self.sat_tmp_notes,
-                            &self.sat_tmp_unit,
-                            &self.sat_tmp_xdat,
-                            &self.sat_tmp_xdat_unc,
-                            &self.sat_tmp_ydat,
-                            &self.sat_tmp_ydat_unc,
-                        ) {
-                            Ok(sc) => self.saturation_curves.push(sc),
-                            Err(err) => self.error_saturation = err,
+                        self.error_saturation.clear();
+
+                        if self.sat_tmp_title.is_empty() {
+                            self.error_saturation = "Title cannot be empty.".to_owned();
+                        } else {
+                            for entry in &self.saturation_curves {
+                                if entry.title.eq(&self.sat_tmp_title) {
+                                    self.error_saturation = "Title already exists.".to_owned();
+                                    break;
+                                }
+                            }
+                        }
+
+                        // create a new saturation curve object to push to the vec if no previous error
+                        if self.error_saturation.is_empty() {
+                            match SaturationCurve::new_from_parts(
+                                &self.sat_tmp_title,
+                                &self.sat_tmp_notes,
+                                &self.sat_tmp_unit,
+                                &self.sat_tmp_xdat,
+                                &self.sat_tmp_xdat_unc,
+                                &self.sat_tmp_ydat,
+                                &self.sat_tmp_ydat_unc,
+                            ) {
+                                Ok(sc) => {
+                                    self.saturation_curves.push(sc);
+                                    self.sat_tmp_title.clear();
+                                    self.sat_tmp_notes.clear();
+                                    self.sat_tmp_xdat.clear();
+                                    self.sat_tmp_xdat_unc.clear();
+                                    self.sat_tmp_ydat.clear();
+                                    self.sat_tmp_ydat_unc.clear();
+                                }
+                                Err(err) => self.error_saturation = err,
+                            };
                         };
-                    };
-                    ui.label(
-                        RichText::new(&self.error_saturation)
-                            .color(egui::Color32::RED)
-                            .strong(),
-                    );
+                    }
+                    if !self.error_saturation.is_empty() {
+                        ui.label(
+                            RichText::new(&self.error_saturation)
+                                .color(egui::Color32::RED)
+                                .strong(),
+                        );
+                    }
                 });
                 ui.add_space(VERTICAL_SPACE);
 
@@ -355,13 +382,10 @@ impl eframe::App for TemplateApp {
                         ui.label("Title of curve");
                         ui.label("Delete entry?");
                         ui.end_row();
-                        let loop_ref = self.saturation_curves.clone();
-                        let reference_iter = loop_ref.clone();
-                        for val in reference_iter {
-                            ui.label(val.title.clone());
+                        for (it, val) in self.saturation_curves.clone().iter().enumerate() {
+                            ui.label(&val.title);
                             if ui.button("Delete").clicked() {
-                                let index = loop_ref.iter().position(|x| x == &val).unwrap();
-                                self.references.remove(index);
+                                self.saturation_curves.remove(it);
                             }
                             ui.end_row();
                         }
@@ -388,9 +412,8 @@ impl eframe::App for TemplateApp {
                         .on_hover_text("Add the current reference to the list.")
                         .clicked()
                     {
-                        let tmp = self.reference_entry.clone();
-                        if !tmp.is_empty() {
-                            if self.references.contains(&tmp) {
+                        if !self.reference_entry.is_empty() {
+                            if self.references.contains(&self.reference_entry) {
                                 self.error_reference = "Reference already in list.".to_owned();
                             } else {
                                 self.references.push(self.reference_entry.clone());
@@ -401,11 +424,13 @@ impl eframe::App for TemplateApp {
                             self.error_reference = "Reference is empty.".to_owned();
                         };
                     };
-                    ui.label(
-                        RichText::new(&self.error_reference)
-                            .color(egui::Color32::RED)
-                            .strong(),
-                    );
+                    if !self.error_reference.is_empty() {
+                        ui.label(
+                            RichText::new(&self.error_reference)
+                                .color(egui::Color32::RED)
+                                .strong(),
+                        );
+                    }
                 });
                 ui.add_space(VERTICAL_SPACE);
 
@@ -419,13 +444,10 @@ impl eframe::App for TemplateApp {
                         ui.label("DOI");
                         ui.label("Delete entry?");
                         ui.end_row();
-                        let loop_ref = self.references.clone();
-                        let reference_iter = loop_ref.clone();
-                        for val in reference_iter {
-                            ui.label(val.clone());
+                        for (it, val) in self.references.clone().iter().enumerate() {
+                            ui.label(val);
                             if ui.button("Delete").clicked() {
-                                let index = loop_ref.iter().position(|x| x == &val).unwrap();
-                                self.references.remove(index);
+                                self.references.remove(it);
                             }
                             ui.end_row();
                         }
@@ -437,10 +459,11 @@ impl eframe::App for TemplateApp {
                 ui.horizontal(|ui| {
                     if ui.button("Submit via GitHub").clicked() {
                         println!("Submit scheme via GitHub.");
+                        println!("{:?}", self.saturation_curves);
                     }
                     if ui.button("Submit via E-Mail").clicked() {
                         println!("Submit scheme via e-mail.");
-                        println!("{:?}", self.references)
+                        println!("{:?}", self.references);
                     }
                     if ui.add(egui::Button::new("Clear all")).clicked() {
                         *self = Default::default();
@@ -457,6 +480,11 @@ impl eframe::App for TemplateApp {
                 });
             });
         });
+    }
+
+    /// Called by the framework to save state before shutdown.
+    fn save(&mut self, storage: &mut dyn eframe::Storage) {
+        eframe::set_value(storage, eframe::APP_KEY, self);
     }
 }
 
@@ -480,14 +508,14 @@ to the database.";
 
 const USAGE_MESSAGE_GENERAL: &str = "If you have a config file that from the RIMSSchemeDrawer \
 software, you can upload it first. Then fill out any additional information you want to submit in \
-the form below.\n\n\
-Alternatively, you can skip the file upload and fill out the form from scratch. \n\n \
+the form below.\n\
+Alternatively, you can skip the file upload and fill out the form from scratch.\n\
 Detailed information for each segment are given in the individual sections below.";
 
 const USAGE_MESSAGE_SCHEME: &str = "The scheme is the main part of the submission. \
-It should contain at a minimum the element, the ground state, as well as one or more transitions.\n \
-First select the units that you would like to use (nm or 1/cm). Then fill out the \
-levels, optional term symbols, transmission strengths (in 1/s), \
+It should contain at a minimum the element, the ground state, as well as one or more transitions.\n\
+First select the units that you would like to use (nm or cm¯¹). Then fill out the \
+levels, optional term symbols, transmission strengths (in s¯¹), \
 and whether the level is a low-lying level or if the transition is forbidden. \
 Finally, select the lasers that were used for this scheme. \
 Further information can always be provided in the notes.";
