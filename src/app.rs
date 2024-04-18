@@ -372,25 +372,27 @@ impl eframe::App for TemplateApp {
                 });
                 ui.add_space(VERTICAL_SPACE);
 
-                ui.label("List of existing saturation curve entries:");
-                ui.add_space(VERTICAL_SPACE);
+                if !self.saturation_curves.is_empty() {
+                    ui.label("List of existing saturation curve entries:");
+                    ui.add_space(VERTICAL_SPACE);
 
-                egui::Grid::new("saturation_curve_table")
-                    .striped(true)
-                    .min_col_width(COL_MIN_WIDTH)
-                    .show(ui, |ui| {
-                        ui.label("Title of curve");
-                        ui.label("Delete entry?");
-                        ui.end_row();
-                        for (it, val) in self.saturation_curves.clone().iter().enumerate() {
-                            ui.label(&val.title);
-                            if ui.button("Delete").clicked() {
-                                self.saturation_curves.remove(it);
-                            }
+                    egui::Grid::new("saturation_curve_table")
+                        .striped(true)
+                        .min_col_width(COL_MIN_WIDTH)
+                        .show(ui, |ui| {
+                            ui.label("Title of curve");
+                            ui.label("Delete entry?");
                             ui.end_row();
-                        }
-                    });
-                ui.add_space(VERTICAL_SPACE);
+                            for (it, val) in self.saturation_curves.clone().iter().enumerate() {
+                                ui.label(&val.title);
+                                if ui.button("Delete").clicked() {
+                                    self.saturation_curves.remove(it);
+                                }
+                                ui.end_row();
+                            }
+                        });
+                    ui.add_space(VERTICAL_SPACE);
+                };
 
                 ui.separator();
                 ui.add_space(VERTICAL_SPACE);
@@ -434,25 +436,27 @@ impl eframe::App for TemplateApp {
                 });
                 ui.add_space(VERTICAL_SPACE);
 
-                ui.label("List of existing references:");
-                ui.add_space(VERTICAL_SPACE);
+                if !self.references.is_empty() {
+                    ui.label("List of existing references:");
+                    ui.add_space(VERTICAL_SPACE);
 
-                egui::Grid::new("reference_table")
-                    .striped(true)
-                    .min_col_width(COL_MIN_WIDTH)
-                    .show(ui, |ui| {
-                        ui.label("DOI");
-                        ui.label("Delete entry?");
-                        ui.end_row();
-                        for (it, val) in self.references.clone().iter().enumerate() {
-                            ui.label(val);
-                            if ui.button("Delete").clicked() {
-                                self.references.remove(it);
-                            }
+                    egui::Grid::new("reference_table")
+                        .striped(true)
+                        .min_col_width(COL_MIN_WIDTH)
+                        .show(ui, |ui| {
+                            ui.label("DOI");
+                            ui.label("Delete entry?");
                             ui.end_row();
-                        }
-                    });
-                ui.add_space(VERTICAL_SPACE);
+                            for (it, val) in self.references.clone().iter().enumerate() {
+                                ui.label(val);
+                                if ui.button("Delete").clicked() {
+                                    self.references.remove(it);
+                                }
+                                ui.end_row();
+                            }
+                        });
+                    ui.add_space(VERTICAL_SPACE);
+                };
 
                 ui.separator();
 
