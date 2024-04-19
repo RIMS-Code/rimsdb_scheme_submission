@@ -11,6 +11,7 @@ use crate::{
 pub struct TemplateApp {
     notes: String,
     references: Vec<String>,
+    rimsschemedrawer_in: String,
     saturation_curves: Vec<SaturationCurve>,
     scheme_element: Elements,
     scheme_gs: GroundState,
@@ -37,6 +38,8 @@ pub struct TemplateApp {
     #[serde(skip)]
     error_reference: String,
     #[serde(skip)]
+    error_rimsschemedrawer_in: String,
+    #[serde(skip)]
     error_saturation: String,
 }
 
@@ -46,6 +49,7 @@ impl Default for TemplateApp {
             notes: String::new(),
             references: Vec::new(),
             reference_entry: String::new(),
+            rimsschemedrawer_in: String::new(),
             saturation_curves: Vec::new(),
             scheme_element: Elements::H,
             scheme_gs: GroundState {
@@ -72,6 +76,7 @@ impl Default for TemplateApp {
             sat_tmp_ydat: String::new(),
             sat_tmp_ydat_unc: String::new(),
             error_reference: String::new(),
+            error_rimsschemedrawer_in: String::new(),
             error_saturation: String::new(),
         }
     }
@@ -136,6 +141,34 @@ impl eframe::App for TemplateApp {
 
                 ui.collapsing("Usage Scheme", |ui| {
                     ui.label(USAGE_MESSAGE_SCHEME);
+                });
+                ui.add_space(VERTICAL_SPACE);
+
+                // Upload existing file
+                ui.horizontal(|ui| {
+                    ui.label("RIMSSchemeDrawer config file:");
+                    ui.text_edit_singleline(&mut self.rimsschemedrawer_in);
+                    if ui.button("Apply")
+                        .on_hover_text("Fill scheme with provided RIMSSchemeDrawer file.")
+                        .clicked() {
+
+                        self.error_rimsschemedrawer_in.clear();
+
+                        if self.rimsschemedrawer_in.is_empty() {
+                            self.error_rimsschemedrawer_in = "Please provide the RIMSSchemeDrawer config file in the text box.".to_owned();
+                        } else {
+                            // fixme: Do something with the input -> parse it!
+                            println!("Reading file: {:?}", self.rimsschemedrawer_in);
+                            self.rimsschemedrawer_in.clear();
+                        }
+                    }
+                    if !self.error_rimsschemedrawer_in.is_empty() {
+                        ui.label(
+                            RichText::new(&self.error_rimsschemedrawer_in)
+                                .color(egui::Color32::RED)
+                                .strong(),
+                        );
+                    }
                 });
                 ui.add_space(VERTICAL_SPACE);
 
@@ -511,7 +544,7 @@ const INTRO_MESSAGE: &str = "You can use this form to submit a new resonance ion
 to the database.";
 
 const USAGE_MESSAGE_GENERAL: &str = "If you have a config file that from the RIMSSchemeDrawer \
-software, you can upload it first. Then fill out any additional information you want to submit in \
+software, you can paste and apply it first. Then fill out any additional information you want to submit in \
 the form below.\n\
 Alternatively, you can skip the file upload and fill out the form from scratch.\n\
 Detailed information for each segment are given in the individual sections below.";
