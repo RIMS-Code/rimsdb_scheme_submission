@@ -239,7 +239,11 @@ impl eframe::App for TemplateApp {
                                 true => TransitionUnit::CM1.to_string(),
                                 false => self.scheme_unit.to_string(),
                             };
-                            ui.label(format!("Step {} ({}):", it + 1, unit));
+                            let stp_name = match trans.low_lying {
+                                true => "Low-lying",
+                                false => "Step",
+                            };
+                            ui.label(format!("{} {} ({}):", stp_name, it + 1, unit));
                             ui.add(
                                 egui::TextEdit::singleline(&mut trans.level)
                                     .desired_width(TEXT_INPUT_WIDTH)
