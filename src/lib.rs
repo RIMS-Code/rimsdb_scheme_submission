@@ -1,3 +1,4 @@
+use std::borrow::ToOwned;
 use std::fmt;
 
 use serde_json::{json, ser::to_string_pretty, Value};
@@ -6,6 +7,8 @@ use strum_macros::EnumIter;
 mod app;
 
 pub use app::TemplateApp;
+
+const DB_MAINTAINER_EMAIL: &str = "reto@galactic-forensics.space";
 
 #[derive(Debug, PartialEq, serde::Deserialize, serde::Serialize, EnumIter)]
 pub enum Elements {
@@ -240,6 +243,21 @@ pub struct GroundState {
     pub term_symbol: String,
 }
 
+impl GroundState {
+    fn get_level(&self) -> Result<String, String> {
+        if self.level.is_empty() {
+            return Err("Ground state level is empty.".to_owned());
+        }
+
+        match self.level.parse::<f64>() {
+            Ok(_) => (),
+            Err(_) => return Err("Ground state level is not a number.".to_owned()),
+        }
+
+        Ok(self.level.clone())
+    }
+}
+
 #[derive(Debug, PartialEq, serde::Deserialize, serde::Serialize)]
 pub enum Lasers {
     TiSa,
@@ -371,6 +389,32 @@ impl Transition {
             forbidden: false,
         }
     }
+
+    fn get_level(&self) -> Result<String, String> {
+        if self.level.is_empty() {
+            return Ok("".to_owned());
+        }
+
+        match self.level.parse::<f64>() {
+            Ok(_) => (),
+            Err(_) => return Err("Transition level is not a number.".to_owned()),
+        }
+
+        Ok(self.level.clone())
+    }
+
+    fn get_transition_strength(&self) -> Result<String, String> {
+        if self.transition_strength.is_empty() {
+            return Ok("".to_owned());
+        }
+
+        match self.transition_strength.parse::<f64>() {
+            Ok(_) => (),
+            Err(_) => return Err("Transition strength is not a number.".to_owned()),
+        }
+
+        Ok(self.transition_strength.clone())
+    }
 }
 
 /// Create GitHub issue link that will automatically open the issue submission and fill it.
@@ -387,46 +431,59 @@ fn create_gh_issue(body: &str, element: &Elements) -> String {
 /// Create email content and link and fill it
 fn create_email_link(body: &str, element: &Elements) -> String {
     let newline = "%0D%0A";
-    let spacer = "\n\n======= SCHEME FILE: DO NOT EDIT BELOW THIS LINE =======\n\n".replace('\n', newline);
+    let spacer =
+        "\n\n======= SCHEME FILE: DO NOT EDIT BELOW THIS LINE =======\n\n".replace('\n', newline);
 
-    let address = "reto@galactic-forensics.space";
     let title = format!("Scheme submission: {:?}", element);
 
     format!(
         "mailto:{}?subject={}&body={}{}",
-        address, title, spacer, body.replace('\n', newline)
+        DB_MAINTAINER_EMAIL,
+        title,
+        spacer,
+        body.replace('\n', newline)
     )
 }
 
 /// Create a JSON output string from the input data in the mask.
-fn create_json_output(app_entries: &TemplateApp) -> serde_json::Result<String> {
+fn create_json_output(app_entries: &TemplateApp) -> Result<String, String> {
     let scheme_unit_json = match app_entries.scheme_unit {
         TransitionUnit::NM => "nm",
         TransitionUnit::CM1 => "cm<sup>-1</sup>",
     };
 
+    // error checking
+    if app_entries.scheme_transitions[0].level.is_empty() {
+        return Err("No transitions entered: Please add at least one step.".to_owned());
+    }
+
+    // create the json file
     let mut json_out = json!({
         "notes": app_entries.notes,
         "rims_scheme": {
             "element": format!("{:?}", app_entries.scheme_element),
             "laser": app_entries.scheme_lasers.to_string(),
-            "gs_level": app_entries.scheme_gs.level,
             "gs_term": app_entries.scheme_gs.term_symbol,
+            "gs_level": app_entries.scheme_gs.get_level()?,
             "ip_term": app_entries.scheme_ip_term_symbol,
             "unit": scheme_unit_json,
         },
         "saturation_curves": {
         },
         "references": app_entries.references,
+        "submitted_by": app_entries.submitted_by,
     });
 
     for (it, val) in app_entries.scheme_transitions.iter().enumerate() {
-        json_out["rims_scheme"][format!("step_level{}", it)] = Value::from(val.level.clone());
-        json_out["rims_scheme"][format!("step_term{}", it)] = Value::from(val.term_symbol.clone());
-        json_out["rims_scheme"][format!("trans_strength{}", it)] =
-            Value::from(val.transition_strength.clone());
-        json_out["rims_scheme"][format!("step_forbidden{}", it)] = Value::from(val.forbidden);
-        json_out["rims_scheme"][format!("step_lowlying{}", it)] = Value::from(val.low_lying);
+        let level = val.get_level()?;
+        if !level.is_empty() {
+            json_out["rims_scheme"][format!("step_level{}", it)] = Value::from(level);
+            json_out["rims_scheme"][format!("step_term{}", it)] = Value::from(val.term_symbol.clone());
+            json_out["rims_scheme"][format!("trans_strength{}", it)] =
+                Value::from(val.get_transition_strength()?);
+            json_out["rims_scheme"][format!("step_forbidden{}", it)] = Value::from(val.forbidden);
+            json_out["rims_scheme"][format!("step_lowlying{}", it)] = Value::from(val.low_lying);
+        }
     }
 
     for val in app_entries.saturation_curves.iter() {
@@ -459,9 +516,11 @@ fn create_json_output(app_entries: &TemplateApp) -> serde_json::Result<String> {
         }
     }
 
-    to_string_pretty(&json_out)
+    match to_string_pretty(&json_out) {
+        Ok(json) => Ok(json),
+        Err(e) => Err(format!("Error creating JSON output: {}", e).to_string()),
+    }
 }
-
 
 /// Take a data string and split it into a vector of strings according to a list of delimiters.
 fn split_data_string(data: &str) -> Vec<String> {

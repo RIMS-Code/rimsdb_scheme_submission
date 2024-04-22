@@ -20,6 +20,7 @@ pub struct TemplateApp {
     pub scheme_lasers: Lasers,
     pub scheme_transitions: [Transition; 7],
     pub scheme_unit: TransitionUnit,
+    pub submitted_by: String,
     #[serde(skip)]
     reference_entry: String,
     #[serde(skip)]
@@ -71,6 +72,7 @@ impl Default for TemplateApp {
                 Transition::new_empty(),
             ],
             scheme_unit: TransitionUnit::CM1,
+            submitted_by: String::new(),
             sat_tmp_title: String::new(),
             sat_tmp_notes: String::new(),
             sat_tmp_unit: SaturationCurveUnit::WCM2,
@@ -497,10 +499,22 @@ impl eframe::App for TemplateApp {
 
                 ui.separator();
 
+                ui.add_space(VERTICAL_SPACE);
+
+                ui.heading(RichText::new("Submitted by").strong());
+                ui.add_space(VERTICAL_SPACE);
+
+                ui.text_edit_singleline(&mut self.submitted_by)
+                    .on_hover_text("Enter your name here.");
+                ui.add_space(VERTICAL_SPACE);
+
+                ui.separator();
+
                 ui.horizontal(|ui| {
                     if ui.button("Submit via GitHub")
                         .on_hover_text("Submit the scheme via GitHub using your account.")
                         .clicked() {
+                        self.error_submission.clear();
                         let body = create_json_output(self).unwrap_or_else(|e| {
                             self.error_submission = format!("Error creating JSON output: {}", e).to_owned();
                             "".to_owned()
@@ -515,6 +529,7 @@ impl eframe::App for TemplateApp {
                         }
                     }
                     if ui.button("Submit via E-Mail").clicked() {
+                        self.error_submission.clear();
                         let body = create_json_output(self).unwrap_or_else(|e| {
                             self.error_submission = format!("Error creating JSON output: {}", e).to_owned();
                             "".to_owned()
@@ -528,6 +543,17 @@ impl eframe::App for TemplateApp {
                             ui.ctx().open_url(open_url);
                         }
                     }
+
+                    // if in debug mode, display a test button
+                    if cfg!(debug_assertions) && ui.button("Test").clicked() {
+                        self.error_submission.clear();
+                        let body = create_json_output(self).unwrap_or_else(|e| {
+                            self.error_submission = format!("Error creating JSON output: {}", e).to_owned();
+                            "".to_owned()
+                        });
+                        println!("{}", body);
+                    }
+
                     if ui.add(egui::Button::new("Clear all")).clicked() {
                         *self = Default::default();
                     }
