@@ -2,8 +2,8 @@ use egui::RichText;
 use strum::IntoEnumIterator;
 
 use crate::{
-    create_email_link, create_gh_issue, create_json_output, Elements, GroundState,
-    Lasers, SaturationCurve, SaturationCurveUnit, Transition, TransitionUnit,
+    create_email_link, create_gh_issue, create_json_output, Elements, GroundState, Lasers,
+    SaturationCurve, SaturationCurveUnit, Transition, TransitionUnit,
 };
 
 /// We derive Deserialize/Serialize to persist app state on shutdown.

@@ -478,7 +478,8 @@ fn create_json_output(app_entries: &TemplateApp) -> Result<String, String> {
         let level = val.get_level()?;
         if !level.is_empty() {
             json_out["rims_scheme"][format!("step_level{}", it)] = Value::from(level);
-            json_out["rims_scheme"][format!("step_term{}", it)] = Value::from(val.term_symbol.clone());
+            json_out["rims_scheme"][format!("step_term{}", it)] =
+                Value::from(val.term_symbol.clone());
             json_out["rims_scheme"][format!("trans_strength{}", it)] =
                 Value::from(val.get_transition_strength()?);
             json_out["rims_scheme"][format!("step_forbidden{}", it)] = Value::from(val.forbidden);
