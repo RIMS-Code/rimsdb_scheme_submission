@@ -2,23 +2,24 @@ use egui::RichText;
 use strum::IntoEnumIterator;
 
 use crate::{
-    Elements, GroundState, Lasers, SaturationCurve, SaturationCurveUnit, Transition, TransitionUnit,
+    create_email_link, create_gh_issue, create_json_output, Elements, GroundState,
+    Lasers, SaturationCurve, SaturationCurveUnit, Transition, TransitionUnit,
 };
 
 /// We derive Deserialize/Serialize to persist app state on shutdown.
 #[derive(serde::Deserialize, serde::Serialize)]
 #[serde(default)] // if we add new fields, give them default values when deserializing old state
 pub struct TemplateApp {
-    notes: String,
-    references: Vec<String>,
-    rimsschemedrawer_in: String,
-    saturation_curves: Vec<SaturationCurve>,
-    scheme_element: Elements,
-    scheme_gs: GroundState,
-    scheme_ip_term_symbol: String,
-    scheme_lasers: Lasers,
-    scheme_transitions: [Transition; 7],
-    scheme_unit: TransitionUnit,
+    pub notes: String,
+    pub references: Vec<String>,
+    pub rimsschemedrawer_in: String,
+    pub saturation_curves: Vec<SaturationCurve>,
+    pub scheme_element: Elements,
+    pub scheme_gs: GroundState,
+    pub scheme_ip_term_symbol: String,
+    pub scheme_lasers: Lasers,
+    pub scheme_transitions: [Transition; 7],
+    pub scheme_unit: TransitionUnit,
     #[serde(skip)]
     reference_entry: String,
     #[serde(skip)]
@@ -41,6 +42,8 @@ pub struct TemplateApp {
     error_rimsschemedrawer_in: String,
     #[serde(skip)]
     error_saturation: String,
+    #[serde(skip)]
+    error_submission: String,
 }
 
 impl Default for TemplateApp {
@@ -78,6 +81,7 @@ impl Default for TemplateApp {
             error_reference: String::new(),
             error_rimsschemedrawer_in: String::new(),
             error_saturation: String::new(),
+            error_submission: String::new(),
         }
     }
 }
@@ -494,16 +498,45 @@ impl eframe::App for TemplateApp {
                 ui.separator();
 
                 ui.horizontal(|ui| {
-                    if ui.button("Submit via GitHub").clicked() {
-                        println!("Submit scheme via GitHub.");
-                        println!("{:?}", self.saturation_curves);
+                    if ui.button("Submit via GitHub")
+                        .on_hover_text("Submit the scheme via GitHub using your account.")
+                        .clicked() {
+                        let body = create_json_output(self).unwrap_or_else(|e| {
+                            self.error_submission = format!("Error creating JSON output: {}", e).to_owned();
+                            "".to_owned()
+                        });
+                        let url = create_gh_issue(&body, &self.scheme_element);
+                        let open_url = egui::OpenUrl {
+                            url,
+                            new_tab: true,
+                        };
+                        if !body.is_empty() {
+                            ui.ctx().open_url(open_url);
+                        }
                     }
                     if ui.button("Submit via E-Mail").clicked() {
-                        println!("Submit scheme via e-mail.");
-                        println!("{:?}", self.references);
+                        let body = create_json_output(self).unwrap_or_else(|e| {
+                            self.error_submission = format!("Error creating JSON output: {}", e).to_owned();
+                            "".to_owned()
+                        });
+                        let url = create_email_link(&body, &self.scheme_element);
+                        let open_url = egui::OpenUrl {
+                            url,
+                            new_tab: true,
+                        };
+                        if !body.is_empty() {
+                            ui.ctx().open_url(open_url);
+                        }
                     }
                     if ui.add(egui::Button::new("Clear all")).clicked() {
                         *self = Default::default();
+                    }
+                    if !self.error_submission.is_empty() {
+                        ui.label(
+                            RichText::new(&self.error_submission)
+                                .color(egui::Color32::RED)
+                                .strong(),
+                        );
                     }
                 });
 

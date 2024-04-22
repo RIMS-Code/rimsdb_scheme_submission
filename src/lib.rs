@@ -1,5 +1,6 @@
 use std::fmt;
 
+use serde_json::{json, ser::to_string_pretty, Value};
 use strum_macros::EnumIter;
 
 mod app;
@@ -371,6 +372,96 @@ impl Transition {
         }
     }
 }
+
+/// Create GitHub issue link that will automatically open the issue submission and fill it.
+fn create_gh_issue(body: &str, element: &Elements) -> String {
+    let title = format!("Scheme submission: {:?}", element);
+    let label = "scheme_submission";
+
+    format!(
+        "https://github.com/RIMS-Code/rims-code.github.io/issues/new?labels={}&title={}&body={}",
+        label, title, body
+    )
+}
+
+/// Create email content and link and fill it
+fn create_email_link(body: &str, element: &Elements) -> String {
+    let newline = "%0D%0A";
+    let spacer = "\n\n======= SCHEME FILE: DO NOT EDIT BELOW THIS LINE =======\n\n".replace('\n', newline);
+
+    let address = "reto@galactic-forensics.space";
+    let title = format!("Scheme submission: {:?}", element);
+
+    format!(
+        "mailto:{}?subject={}&body={}{}",
+        address, title, spacer, body.replace('\n', newline)
+    )
+}
+
+/// Create a JSON output string from the input data in the mask.
+fn create_json_output(app_entries: &TemplateApp) -> serde_json::Result<String> {
+    let scheme_unit_json = match app_entries.scheme_unit {
+        TransitionUnit::NM => "nm",
+        TransitionUnit::CM1 => "cm<sup>-1</sup>",
+    };
+
+    let mut json_out = json!({
+        "notes": app_entries.notes,
+        "rims_scheme": {
+            "element": format!("{:?}", app_entries.scheme_element),
+            "laser": app_entries.scheme_lasers.to_string(),
+            "gs_level": app_entries.scheme_gs.level,
+            "gs_term": app_entries.scheme_gs.term_symbol,
+            "ip_term": app_entries.scheme_ip_term_symbol,
+            "unit": scheme_unit_json,
+        },
+        "saturation_curves": {
+        },
+        "references": app_entries.references,
+    });
+
+    for (it, val) in app_entries.scheme_transitions.iter().enumerate() {
+        json_out["rims_scheme"][format!("step_level{}", it)] = Value::from(val.level.clone());
+        json_out["rims_scheme"][format!("step_term{}", it)] = Value::from(val.term_symbol.clone());
+        json_out["rims_scheme"][format!("trans_strength{}", it)] =
+            Value::from(val.transition_strength.clone());
+        json_out["rims_scheme"][format!("step_forbidden{}", it)] = Value::from(val.forbidden);
+        json_out["rims_scheme"][format!("step_lowlying{}", it)] = Value::from(val.low_lying);
+    }
+
+    for val in app_entries.saturation_curves.iter() {
+        let sat_unit_json = match val.units {
+            SaturationCurveUnit::WCM2 => "W * cm^-2",
+            SaturationCurveUnit::W => "W",
+        };
+
+        json_out["saturation_curves"][&val.title] = json!({
+            "notes": val.notes,
+            "units": sat_unit_json,
+            "data": {
+                "xdat": val.xdat,
+                "ydat": val.ydat,
+            }
+        });
+        match &val.xdat_unc {
+            Some(x) => {
+                json_out["saturation_curves"][&val.title]["data"]["xdat_unc"] =
+                    Value::from(x.clone())
+            }
+            None => (),
+        }
+        match &val.ydat_unc {
+            Some(y) => {
+                json_out["saturation_curves"][&val.title]["data"]["ydat_unc"] =
+                    Value::from(y.clone())
+            }
+            None => (),
+        }
+    }
+
+    to_string_pretty(&json_out)
+}
+
 
 /// Take a data string and split it into a vector of strings according to a list of delimiters.
 fn split_data_string(data: &str) -> Vec<String> {
