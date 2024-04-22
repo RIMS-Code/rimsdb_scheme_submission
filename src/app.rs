@@ -570,13 +570,13 @@ impl eframe::App for TemplateApp {
                     }
                 });
 
+                ui.add_space(5. * VERTICAL_SPACE);
                 ui.with_layout(egui::Layout::bottom_up(egui::Align::LEFT), |ui| {
                     powered_by_egui_and_eframe(ui);
                     ui.hyperlink_to(
                         "Source code",
                         "https://github.com/RIMS-Code/rimsdb_scheme_submission",
                     );
-                    egui::warn_if_debug_build(ui);
                 });
             });
         });
