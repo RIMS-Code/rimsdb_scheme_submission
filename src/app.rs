@@ -1,11 +1,11 @@
-use egui::{Context, RichText};
+use egui::RichText;
 use std::future::Future;
 use std::sync::mpsc::{channel, Receiver, Sender};
 use strum::IntoEnumIterator;
 
 use crate::{
-    create_email_link, create_gh_issue, create_json_output, Elements, GroundState, Lasers,
-    SaturationCurve, SaturationCurveUnit, Transition, TransitionUnit,
+    create_gh_issue, create_json_output, Elements, GroundState, Lasers, SaturationCurve,
+    SaturationCurveUnit, Transition, TransitionUnit,
 };
 
 /// We derive Deserialize/Serialize to persist app state on shutdown.
@@ -541,19 +541,25 @@ impl eframe::App for TemplateApp {
                             ui.ctx().open_url(open_url);
                         }
                     }
-                    if ui.button("Submit via E-Mail").clicked() {
+                    if ui.button("Download to submit via E-Mail").clicked() {
                         self.error_submission.clear();
                         let body = create_json_output(self).unwrap_or_else(|e| {
                             self.error_submission = format!("Error creating JSON output: {}", e).to_owned();
                             "".to_owned()
                         });
-                        let url = create_email_link(&body, &self.scheme_element);
-                        let open_url = egui::OpenUrl {
-                            url,
-                            new_tab: true,
-                        };
                         if !body.is_empty() {
-                            ui.ctx().open_url(open_url);
+                            let filter = ["json"];
+                            let task = rfd::AsyncFileDialog::new()
+                                .set_file_name(format!("{:?}.json", self.scheme_element))
+                                .add_filter("JSON file", &filter)
+                                .save_file();
+                            let contents = body;
+                            execute(async move {
+                                let file = task.await;
+                                if let Some(file) = file {
+                                    _ = file.write(contents.as_bytes()).await
+                                }
+                            });
                         }
                     }
 

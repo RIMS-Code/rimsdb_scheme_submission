@@ -8,8 +8,6 @@ mod app;
 
 pub use app::TemplateApp;
 
-const DB_MAINTAINER_EMAIL: &str = "reto@galactic-forensics.space";
-
 #[derive(Debug, PartialEq, serde::Deserialize, serde::Serialize, EnumIter)]
 pub enum Elements {
     H,
@@ -425,23 +423,6 @@ fn create_gh_issue(body: &str, element: &Elements) -> String {
     format!(
         "https://github.com/RIMS-Code/rims-code.github.io/issues/new?labels={}&title={}&body={}",
         label, title, body
-    )
-}
-
-/// Create email content and link and fill it
-fn create_email_link(body: &str, element: &Elements) -> String {
-    let newline = "%0D%0A";
-    let spacer =
-        "\n\n======= SCHEME FILE: DO NOT EDIT BELOW THIS LINE =======\n\n".replace('\n', newline);
-
-    let title = format!("Scheme submission: {:?}", element);
-
-    format!(
-        "mailto:{}?subject={}&body={}{}",
-        DB_MAINTAINER_EMAIL,
-        title,
-        spacer,
-        body.replace('\n', newline)
     )
 }
 
