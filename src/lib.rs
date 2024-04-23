@@ -1,5 +1,6 @@
 use std::borrow::ToOwned;
 use std::fmt;
+use std::str::FromStr;
 
 use serde_json::{json, ser::to_string_pretty, Value};
 use strum_macros::EnumIter;
@@ -118,6 +119,124 @@ pub enum Elements {
     Sg,
     Bh,
     Hs,
+}
+
+impl FromStr for Elements {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "H" => Ok(Elements::H),
+            "He" => Ok(Elements::He),
+            "Li" => Ok(Elements::Li),
+            "Be" => Ok(Elements::Be),
+            "B" => Ok(Elements::B),
+            "C" => Ok(Elements::C),
+            "N" => Ok(Elements::N),
+            "O" => Ok(Elements::O),
+            "F" => Ok(Elements::F),
+            "Ne" => Ok(Elements::Ne),
+            "Na" => Ok(Elements::Na),
+            "Mg" => Ok(Elements::Mg),
+            "Al" => Ok(Elements::Al),
+            "Si" => Ok(Elements::Si),
+            "P" => Ok(Elements::P),
+            "S" => Ok(Elements::S),
+            "Cl" => Ok(Elements::Cl),
+            "Ar" => Ok(Elements::Ar),
+            "K" => Ok(Elements::K),
+            "Ca" => Ok(Elements::Ca),
+            "Sc" => Ok(Elements::Sc),
+            "Ti" => Ok(Elements::Ti),
+            "V" => Ok(Elements::V),
+            "Cr" => Ok(Elements::Cr),
+            "Mn" => Ok(Elements::Mn),
+            "Fe" => Ok(Elements::Fe),
+            "Co" => Ok(Elements::Co),
+            "Ni" => Ok(Elements::Ni),
+            "Cu" => Ok(Elements::Cu),
+            "Zn" => Ok(Elements::Zn),
+            "Ga" => Ok(Elements::Ga),
+            "Ge" => Ok(Elements::Ge),
+            "As" => Ok(Elements::As),
+            "Se" => Ok(Elements::Se),
+            "Br" => Ok(Elements::Br),
+            "Kr" => Ok(Elements::Kr),
+            "Rb" => Ok(Elements::Rb),
+            "Sr" => Ok(Elements::Sr),
+            "Y" => Ok(Elements::Y),
+            "Zr" => Ok(Elements::Zr),
+            "Nb" => Ok(Elements::Nb),
+            "Mo" => Ok(Elements::Mo),
+            "Tc" => Ok(Elements::Tc),
+            "Ru" => Ok(Elements::Ru),
+            "Rh" => Ok(Elements::Rh),
+            "Pd" => Ok(Elements::Pd),
+            "Ag" => Ok(Elements::Ag),
+            "Cd" => Ok(Elements::Cd),
+            "In" => Ok(Elements::In),
+            "Sn" => Ok(Elements::Sn),
+            "Sb" => Ok(Elements::Sb),
+            "Te" => Ok(Elements::Te),
+            "I" => Ok(Elements::I),
+            "Xe" => Ok(Elements::Xe),
+            "Cs" => Ok(Elements::Cs),
+            "Ba" => Ok(Elements::Ba),
+            "La" => Ok(Elements::La),
+            "Ce" => Ok(Elements::Ce),
+            "Pr" => Ok(Elements::Pr),
+            "Nd" => Ok(Elements::Nd),
+            "Pm" => Ok(Elements::Pm),
+            "Sm" => Ok(Elements::Sm),
+            "Eu" => Ok(Elements::Eu),
+            "Gd" => Ok(Elements::Gd),
+            "Tb" => Ok(Elements::Tb),
+            "Dy" => Ok(Elements::Dy),
+            "Ho" => Ok(Elements::Ho),
+            "Er" => Ok(Elements::Er),
+            "Tm" => Ok(Elements::Tm),
+            "Yb" => Ok(Elements::Yb),
+            "Lu" => Ok(Elements::Lu),
+            "Hf" => Ok(Elements::Hf),
+            "Ta" => Ok(Elements::Ta),
+            "W" => Ok(Elements::W),
+            "Re" => Ok(Elements::Re),
+            "Os" => Ok(Elements::Os),
+            "Ir" => Ok(Elements::Ir),
+            "Pt" => Ok(Elements::Pt),
+            "Au" => Ok(Elements::Au),
+            "Hg" => Ok(Elements::Hg),
+            "Tl" => Ok(Elements::Tl),
+            "Pb" => Ok(Elements::Pb),
+            "Bi" => Ok(Elements::Bi),
+            "Po" => Ok(Elements::Po),
+            "At" => Ok(Elements::At),
+            "Rn" => Ok(Elements::Rn),
+            "Fr" => Ok(Elements::Fr),
+            "Ra" => Ok(Elements::Ra),
+            "Ac" => Ok(Elements::Ac),
+            "Th" => Ok(Elements::Th),
+            "Pa" => Ok(Elements::Pa),
+            "U" => Ok(Elements::U),
+            "Np" => Ok(Elements::Np),
+            "Pu" => Ok(Elements::Pu),
+            "Am" => Ok(Elements::Am),
+            "Cm" => Ok(Elements::Cm),
+            "Bk" => Ok(Elements::Bk),
+            "Cf" => Ok(Elements::Cf),
+            "Es" => Ok(Elements::Es),
+            "Fm" => Ok(Elements::Fm),
+            "Md" => Ok(Elements::Md),
+            "No" => Ok(Elements::No),
+            "Lr" => Ok(Elements::Lr),
+            "Rf" => Ok(Elements::Rf),
+            "Db" => Ok(Elements::Db),
+            "Sg" => Ok(Elements::Sg),
+            "Bh" => Ok(Elements::Bh),
+            "Hs" => Ok(Elements::Hs),
+            _ => Err(format!("Element {} not found.", s).to_owned()),
+        }
+    }
 }
 
 impl Elements {
@@ -442,12 +561,14 @@ fn create_json_output(app_entries: &TemplateApp) -> Result<String, String> {
     let mut json_out = json!({
         "notes": app_entries.notes,
         "rims_scheme": {
-            "element": format!("{:?}", app_entries.scheme_element),
-            "laser": app_entries.scheme_lasers.to_string(),
-            "gs_term": app_entries.scheme_gs.term_symbol,
-            "gs_level": app_entries.scheme_gs.get_level()?,
-            "ip_term": app_entries.scheme_ip_term_symbol,
-            "unit": scheme_unit_json,
+            "scheme": {
+                "element": format!("{:?}", app_entries.scheme_element),
+                "laser": app_entries.scheme_lasers.to_string(),
+                "gs_term": app_entries.scheme_gs.term_symbol,
+                "gs_level": app_entries.scheme_gs.get_level()?,
+                "ip_term": app_entries.scheme_ip_term_symbol,
+                "unit": scheme_unit_json,
+            },
         },
         "saturation_curves": {
         },
@@ -458,13 +579,15 @@ fn create_json_output(app_entries: &TemplateApp) -> Result<String, String> {
     for (it, val) in app_entries.scheme_transitions.iter().enumerate() {
         let level = val.get_level()?;
         if !level.is_empty() {
-            json_out["rims_scheme"][format!("step_level{}", it)] = Value::from(level);
-            json_out["rims_scheme"][format!("step_term{}", it)] =
+            json_out["rims_scheme"]["scheme"][format!("step_level{}", it)] = Value::from(level);
+            json_out["rims_scheme"]["scheme"][format!("step_term{}", it)] =
                 Value::from(val.term_symbol.clone());
-            json_out["rims_scheme"][format!("trans_strength{}", it)] =
+            json_out["rims_scheme"]["scheme"][format!("trans_strength{}", it)] =
                 Value::from(val.get_transition_strength()?);
-            json_out["rims_scheme"][format!("step_forbidden{}", it)] = Value::from(val.forbidden);
-            json_out["rims_scheme"][format!("step_lowlying{}", it)] = Value::from(val.low_lying);
+            json_out["rims_scheme"]["scheme"][format!("step_forbidden{}", it)] =
+                Value::from(val.forbidden);
+            json_out["rims_scheme"]["scheme"][format!("step_lowlying{}", it)] =
+                Value::from(val.low_lying);
         }
     }
 
@@ -504,16 +627,6 @@ fn create_json_output(app_entries: &TemplateApp) -> Result<String, String> {
     }
 }
 
-/// Take a data string and split it into a vector of strings according to a list of delimiters.
-fn split_data_string(data: &str) -> Vec<String> {
-    let xsplit: Vec<String> = data
-        .split(&[' ', ',', ':', '-', '\t', '\n', '\r'])
-        .filter(|&r| !r.is_empty())
-        .map(|r| r.to_string())
-        .collect();
-    xsplit
-}
-
 /// Take a data string and transfer it to a f64 Vector.
 fn data_string_to_vec_f64(data: &str, name: &str) -> Result<Vec<f64>, String> {
     let mut x_data: Vec<f64> = Vec::new();
@@ -525,4 +638,202 @@ fn data_string_to_vec_f64(data: &str, name: &str) -> Result<Vec<f64>, String> {
         };
     }
     Ok(x_data)
+}
+
+fn load_config_file(app_entries: &mut TemplateApp) -> Result<(), String> {
+    let config_json: Value = match serde_json::from_str(&app_entries.rimsschemedrawer_in) {
+        Ok(json) => json,
+        Err(e) => return Err(format!("Error reading JSON file: {}", e).to_string()),
+    };
+
+    // Let's check what file we have here by looking for the "rims_scheme" key.
+    let scheme;
+    if config_json["rims_scheme"].is_object() {
+        scheme = config_json["rims_scheme"]["scheme"].clone();
+    } else if config_json["scheme"].is_object() {
+        scheme = config_json["scheme"].clone();
+    } else {
+        return Err("No 'rims_scheme' or 'scheme' key found in the JSON file.".to_string());
+    }
+
+    // Load the scheme data
+    app_entries.scheme_element = match scheme["element"].as_str() {
+        Some(e) => e.parse::<Elements>()?,
+        None => return Err("No element found in the JSON file.".to_string()),
+    };
+
+    app_entries.scheme_gs = GroundState {
+        level: scheme["gs_level"].as_str().unwrap_or("0").to_owned(),
+        term_symbol: scheme["gs_term"].as_str().unwrap_or("").to_owned(),
+    };
+
+    app_entries.scheme_ip_term_symbol = scheme["ip_term"].as_str().unwrap_or("").to_owned();
+
+    app_entries.scheme_lasers = match scheme["laser"].as_str() {
+        Some(l) => match l {
+            "Ti:Sa" => Lasers::TiSa,
+            "Dye" => Lasers::Dye,
+            "Ti:Sa and Dye" => Lasers::Both,
+            _ => return Err("Laser type not found.".to_string()),
+        },
+        None => return Err("No laser type found in the JSON file.".to_string()),
+    };
+
+    let mut scheme_transitions: [Transition; 7] = [
+        Transition::new_empty(),
+        Transition::new_empty(),
+        Transition::new_empty(),
+        Transition::new_empty(),
+        Transition::new_empty(),
+        Transition::new_empty(),
+        Transition::new_empty(),
+    ];
+
+    for it in 0..scheme_transitions.len() {
+        if !scheme[format!("step_level{}", it)].is_null() {
+            scheme_transitions[it] = Transition {
+                level: scheme[format!("step_level{}", it)]
+                    .as_str()
+                    .unwrap_or("")
+                    .to_owned(),
+                term_symbol: scheme[format!("step_term{}", it)]
+                    .as_str()
+                    .unwrap_or("")
+                    .to_owned(),
+                transition_strength: scheme[format!("trans_strength{}", it)]
+                    .as_str()
+                    .unwrap_or("")
+                    .to_owned(),
+                low_lying: scheme[format!("step_lowlying{}", it)]
+                    .as_bool()
+                    .unwrap_or(false),
+                forbidden: scheme[format!("step_forbidden{}", it)]
+                    .as_bool()
+                    .unwrap_or(false),
+            };
+        }
+    }
+    app_entries.scheme_transitions = scheme_transitions;
+
+    app_entries.scheme_unit = match scheme["unit"].as_str() {
+        Some(u) => match u {
+            "nm" => TransitionUnit::NM,
+            _ => TransitionUnit::CM1,
+        },
+        None => return Err("No unit found in the JSON file.".to_string()),
+    };
+
+    // Load Notes if they are there
+    app_entries.notes = config_json["notes"].as_str().unwrap_or("").to_owned();
+
+    // Load References if they are there
+    let refs = config_json["references"].as_array();
+    let mut references: Vec<String> = Vec::new();
+    if let Some(refs) = refs {
+        for r in refs {
+            let r_str = match r.as_str() {
+                Some(s) => s,
+                None => continue,
+            };
+            references.push(r_str.to_owned());
+        }
+    }
+    app_entries.references = references;
+
+    // Load saturation curves if they are there
+    let mut saturation_curves: Vec<SaturationCurve> = Vec::new();
+    if config_json["saturation_curves"].is_object() {
+        let sat_json_all = &config_json["saturation_curves"];
+        for (title, value) in sat_json_all.as_object().unwrap() {
+            let notes = value["notes"].as_str().unwrap_or("").to_owned();
+            let units = match value["units"].as_str() {
+                Some("W") => SaturationCurveUnit::W,
+                _ => SaturationCurveUnit::WCM2,
+            };
+            let xdat = match value["data"]["xdat"].as_array() {
+                Some(x) => json_array_to_f64(x)?,
+                None => return Err("No x data found in the JSON file.".to_string()),
+            };
+            let ydat = match value["data"]["ydat"].as_array() {
+                Some(y) => json_array_to_f64(y)?,
+                None => return Err("No y data found in the JSON file.".to_string()),
+            };
+            let xunc = match value["data"]["xdat_unc"].as_array() {
+                Some(x) => Some(json_array_to_f64(x)?),
+                None => None,
+            };
+            let yunc = match value["data"]["ydat_unc"].as_array() {
+                Some(y) => Some(json_array_to_f64(y)?),
+                None => None,
+            };
+            saturation_curves.push(SaturationCurve {
+                title: title.to_owned(),
+                notes,
+                units,
+                xdat,
+                xdat_unc: xunc,
+                ydat,
+                ydat_unc: yunc,
+            });
+        }
+    }
+    app_entries.saturation_curves = saturation_curves;
+
+    Ok(())
+}
+
+/// Take a data string and split it into a vector of strings according to a list of delimiters.
+fn split_data_string(data: &str) -> Vec<String> {
+    let xsplit: Vec<String> = data
+        .split(&[' ', ',', ':', '-', '\t', '\n', '\r'])
+        .filter(|&r| !r.is_empty())
+        .map(|r| r.to_string())
+        .collect();
+    xsplit
+}
+
+fn json_array_to_f64(data: &Vec<Value>) -> Result<Vec<f64>, String> {
+    let mut x_data: Vec<f64> = Vec::new();
+    for xd in data {
+        let xf64 = xd.as_f64();
+        match xf64 {
+            Some(x) => x_data.push(x),
+            None => return Err("None-numeric value fount in data.".to_string()),
+        };
+    }
+    Ok(x_data)
+}
+
+#[cfg(test)]
+#[test]
+fn test_parse_element() {
+    assert_eq!(Elements::from_str("H").unwrap(), Elements::H);
+    assert_eq!(Elements::from_str("He").unwrap(), Elements::He);
+    assert_eq!(Elements::from_str("Li").unwrap(), Elements::Li);
+    assert_eq!(Elements::from_str("Be").unwrap(), Elements::Be);
+    assert_eq!(Elements::from_str("B").unwrap(), Elements::B);
+    assert_eq!(Elements::from_str("C").unwrap(), Elements::C);
+    assert_eq!(Elements::from_str("N").unwrap(), Elements::N);
+    assert_eq!(Elements::from_str("O").unwrap(), Elements::O);
+    assert_eq!(Elements::from_str("F").unwrap(), Elements::F);
+    assert_eq!(Elements::from_str("Ne").unwrap(), Elements::Ne);
+    assert_eq!(Elements::from_str("Na").unwrap(), Elements::Na);
+    assert_eq!(Elements::from_str("Mg").unwrap(), Elements::Mg);
+    assert_eq!(Elements::from_str("Al").unwrap(), Elements::Al);
+    assert_eq!(Elements::from_str("Si").unwrap(), Elements::Si);
+    assert_eq!(Elements::from_str("P").unwrap(), Elements::P);
+    assert_eq!(Elements::from_str("S").unwrap(), Elements::S);
+    assert_eq!(Elements::from_str("Cl").unwrap(), Elements::Cl);
+    assert_eq!(Elements::from_str("Ar").unwrap(), Elements::Ar);
+    assert_eq!(Elements::from_str("K").unwrap(), Elements::K);
+    assert_eq!(Elements::from_str("Ca").unwrap(), Elements::Ca);
+    assert_eq!(Elements::from_str("Sc").unwrap(), Elements::Sc);
+    assert_eq!(Elements::from_str("Ti").unwrap(), Elements::Ti);
+    assert_eq!(Elements::from_str("V").unwrap(), Elements::V);
+    assert_eq!(Elements::from_str("Cr").unwrap(), Elements::Cr);
+    assert_eq!(Elements::from_str("Mn").unwrap(), Elements::Mn);
+    assert_eq!(Elements::from_str("Fe").unwrap(), Elements::Fe);
+    assert_eq!(Elements::from_str("Co").unwrap(), Elements::Co);
+    assert_eq!(Elements::from_str("Ni").unwrap(), Elements::Ni);
+    assert_eq!(Elements::from_str("Cu").unwrap(), Elements::Cu);
 }

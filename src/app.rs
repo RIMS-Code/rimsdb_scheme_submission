@@ -4,8 +4,8 @@ use std::sync::mpsc::{channel, Receiver, Sender};
 use strum::IntoEnumIterator;
 
 use crate::{
-    create_gh_issue, create_json_output, Elements, GroundState, Lasers, SaturationCurve,
-    SaturationCurveUnit, Transition, TransitionUnit,
+    create_gh_issue, create_json_output, load_config_file, Elements, GroundState, Lasers,
+    SaturationCurve, SaturationCurveUnit, Transition, TransitionUnit,
 };
 
 /// We derive Deserialize/Serialize to persist app state on shutdown.
@@ -25,7 +25,7 @@ pub struct TemplateApp {
     #[serde(skip)]
     reference_entry: String,
     #[serde(skip)]
-    rimsschemedrawer_in: String,
+    pub rimsschemedrawer_in: String,
     #[serde(skip)]
     sat_tmp_title: String,
     #[serde(skip)]
@@ -157,32 +157,45 @@ impl eframe::App for TemplateApp {
                 ui.add_space(VERTICAL_SPACE);
 
                 // Upload existing file
-                if ui.button("Load config file")
-                    .on_hover_text("Select a RIMSSchemeDrawer file to load.")
-                    .clicked() {
-                    let sender = self.text_channel.0.clone();
-                    let filter = ["json"];
-                    let task = rfd::AsyncFileDialog::new()
-                        .add_filter("RIMSSchemeDrawer file", &filter)
-                        .pick_file();
-                    // Context is wrapped in an Arc so it's cheap to clone as per:
-                    // > Context is cheap to clone, and any clones refers to the same mutable data (Context uses refcounting internally).
-                    // Taken from https://docs.rs/egui/0.24.1/egui/struct.Context.html
-                    let ctx = ui.ctx().clone();
-                    execute(async move {
-                        let file = task.await;
-                        if let Some(file) = file {
-                            let text = file.read().await;
-                            let _ = sender.send(String::from_utf8_lossy(&text).to_string());
-                            ctx.request_repaint();
-                        }
-                    });
-                }
+                ui.horizontal(|ui| {
+                    if ui.button("Load config file")
+                        .on_hover_text("Select a RIMSSchemeDrawer file to load.")
+                        .clicked() {
+                        let sender = self.text_channel.0.clone();
+                        let filter = ["json"];
+                        let task = rfd::AsyncFileDialog::new()
+                            .add_filter("RIMSSchemeDrawer file", &filter)
+                            .pick_file();
+                        // Context is wrapped in an Arc, so it's cheap to clone as per:
+                        // > Context is cheap to clone, and any clones refers to the same mutable data (Context uses refcounting internally).
+                        // Taken from https://docs.rs/egui/0.24.1/egui/struct.Context.html
+                        let ctx = ui.ctx().clone();
+                        execute(async move {
+                            let file = task.await;
+                            if let Some(file) = file {
+                                let text = file.read().await;
+                                let _ = sender.send(String::from_utf8_lossy(&text).to_string());
+                                ctx.request_repaint();
+                            }
+                        });
+                    }
+                    if !self.error_rimsschemedrawer_in.is_empty() {
+                        ui.label(
+                            RichText::new(&self.error_rimsschemedrawer_in)
+                                .color(egui::Color32::RED)
+                                .strong(),
+                        );
+                    }
+                });
+
                 // deal with uploaded file
                 if let Ok(text) = self.text_channel.1.try_recv() {
+                    self.error_rimsschemedrawer_in.clear();
                     self.rimsschemedrawer_in = text;
-                    // fixme: Do something with the input -> parse it!
-                    println!("Received text: {}", self.rimsschemedrawer_in);
+                    match load_config_file(self) {
+                        Ok(_) => (),
+                        Err(e) => self.error_rimsschemedrawer_in = e,
+                    };
                 }
 
                 ui.add_space(VERTICAL_SPACE);
