@@ -1,4 +1,6 @@
-use egui::RichText;
+use egui::{Context, RichText};
+use std::future::Future;
+use std::sync::mpsc::{channel, Receiver, Sender};
 use strum::IntoEnumIterator;
 
 use crate::{
@@ -12,7 +14,6 @@ use crate::{
 pub struct TemplateApp {
     pub notes: String,
     pub references: Vec<String>,
-    pub rimsschemedrawer_in: String,
     pub saturation_curves: Vec<SaturationCurve>,
     pub scheme_element: Elements,
     pub scheme_gs: GroundState,
@@ -23,6 +24,8 @@ pub struct TemplateApp {
     pub submitted_by: String,
     #[serde(skip)]
     reference_entry: String,
+    #[serde(skip)]
+    rimsschemedrawer_in: String,
     #[serde(skip)]
     sat_tmp_title: String,
     #[serde(skip)]
@@ -37,6 +40,8 @@ pub struct TemplateApp {
     sat_tmp_ydat: String,
     #[serde(skip)]
     sat_tmp_ydat_unc: String,
+    #[serde(skip)]
+    text_channel: (Sender<String>, Receiver<String>),
     #[serde(skip)]
     error_reference: String,
     #[serde(skip)]
@@ -53,7 +58,6 @@ impl Default for TemplateApp {
             notes: String::new(),
             references: Vec::new(),
             reference_entry: String::new(),
-            rimsschemedrawer_in: String::new(),
             saturation_curves: Vec::new(),
             scheme_element: Elements::H,
             scheme_gs: GroundState {
@@ -80,6 +84,8 @@ impl Default for TemplateApp {
             sat_tmp_xdat_unc: String::new(),
             sat_tmp_ydat: String::new(),
             sat_tmp_ydat_unc: String::new(),
+            rimsschemedrawer_in: String::new(),
+            text_channel: channel(),
             error_reference: String::new(),
             error_rimsschemedrawer_in: String::new(),
             error_saturation: String::new(),
@@ -151,31 +157,34 @@ impl eframe::App for TemplateApp {
                 ui.add_space(VERTICAL_SPACE);
 
                 // Upload existing file
-                ui.horizontal(|ui| {
-                    ui.label("RIMSSchemeDrawer config file:");
-                    ui.text_edit_singleline(&mut self.rimsschemedrawer_in);
-                    if ui.button("Apply")
-                        .on_hover_text("Fill scheme with provided RIMSSchemeDrawer file.")
-                        .clicked() {
-
-                        self.error_rimsschemedrawer_in.clear();
-
-                        if self.rimsschemedrawer_in.is_empty() {
-                            self.error_rimsschemedrawer_in = "Please provide the RIMSSchemeDrawer config file in the text box.".to_owned();
-                        } else {
-                            // fixme: Do something with the input -> parse it!
-                            println!("Reading file: {:?}", self.rimsschemedrawer_in);
-                            self.rimsschemedrawer_in.clear();
+                if ui.button("Load config file")
+                    .on_hover_text("Select a RIMSSchemeDrawer file to load.")
+                    .clicked() {
+                    let sender = self.text_channel.0.clone();
+                    let filter = ["json"];
+                    let task = rfd::AsyncFileDialog::new()
+                        .add_filter("RIMSSchemeDrawer file", &filter)
+                        .pick_file();
+                    // Context is wrapped in an Arc so it's cheap to clone as per:
+                    // > Context is cheap to clone, and any clones refers to the same mutable data (Context uses refcounting internally).
+                    // Taken from https://docs.rs/egui/0.24.1/egui/struct.Context.html
+                    let ctx = ui.ctx().clone();
+                    execute(async move {
+                        let file = task.await;
+                        if let Some(file) = file {
+                            let text = file.read().await;
+                            let _ = sender.send(String::from_utf8_lossy(&text).to_string());
+                            ctx.request_repaint();
                         }
-                    }
-                    if !self.error_rimsschemedrawer_in.is_empty() {
-                        ui.label(
-                            RichText::new(&self.error_rimsschemedrawer_in)
-                                .color(egui::Color32::RED)
-                                .strong(),
-                        );
-                    }
-                });
+                    });
+                }
+                // deal with uploaded file
+                if let Ok(text) = self.text_channel.1.try_recv() {
+                    self.rimsschemedrawer_in = text;
+                    // fixme: Do something with the input -> parse it!
+                    println!("Received text: {}", self.rimsschemedrawer_in);
+                }
+
                 ui.add_space(VERTICAL_SPACE);
 
                 // Element
@@ -600,6 +609,17 @@ fn powered_by_egui_and_eframe(ui: &mut egui::Ui) {
         );
         ui.label(".");
     });
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn execute<F: Future<Output = ()> + Send + 'static>(f: F) {
+    // this is stupid... use any executor of your choice instead
+    std::thread::spawn(move || futures::executor::block_on(f));
+}
+
+#[cfg(target_arch = "wasm32")]
+fn execute<F: Future<Output = ()> + 'static>(f: F) {
+    wasm_bindgen_futures::spawn_local(f);
 }
 
 // Constants to configure the App:
