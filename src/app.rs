@@ -4,8 +4,8 @@ use std::sync::mpsc::{channel, Receiver, Sender};
 use strum::IntoEnumIterator;
 
 use crate::{
-    create_gh_issue, create_json_output, load_config_file, Elements, GroundState, Lasers,
-    SaturationCurve, SaturationCurveUnit, Transition, TransitionUnit,
+    create_email_link, create_gh_issue, create_json_output, load_config_file, Elements,
+    GroundState, Lasers, SaturationCurve, SaturationCurveUnit, Transition, TransitionUnit,
 };
 
 /// We derive Deserialize/Serialize to persist app state on shutdown.
@@ -554,7 +554,24 @@ impl eframe::App for TemplateApp {
                             ui.ctx().open_url(open_url);
                         }
                     }
-                    if ui.button("Download to submit via E-Mail").clicked() {
+                    if ui.button("Submit via E-Mail")
+                        .on_hover_text("Submit the scheme via E-Mail.")
+                        .clicked() {
+                        self.error_submission.clear();
+                        let body = create_json_output(self).unwrap_or_else(|e| {
+                            self.error_submission = format!("Error creating JSON output: {}", e).to_owned();
+                            "".to_owned()
+                        });
+                        let url = create_email_link(&body, &self.scheme_element);
+                        let open_url = egui::OpenUrl{
+                            url,
+                            new_tab: true,
+                        };
+                        if !body.is_empty() {
+                            ui.ctx().open_url(open_url);
+                        }
+                    }
+                    if ui.button("Download configuration").clicked() {
                         self.error_submission.clear();
                         let body = create_json_output(self).unwrap_or_else(|e| {
                             self.error_submission = format!("Error creating JSON output: {}", e).to_owned();
