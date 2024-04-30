@@ -582,7 +582,7 @@ fn create_json_output(app_entries: &TemplateApp) -> Result<String, String> {
         "rims_scheme": {
             "scheme": {
                 "element": format!("{:?}", app_entries.scheme_element),
-                "laser": app_entries.scheme_lasers.to_string(),
+                "lasers": app_entries.scheme_lasers.to_string(),
                 "gs_term": app_entries.scheme_gs.term_symbol,
                 "gs_level": app_entries.scheme_gs.get_level()?,
                 "ip_term": app_entries.scheme_ip_term_symbol,
@@ -620,21 +620,19 @@ fn create_json_output(app_entries: &TemplateApp) -> Result<String, String> {
             "notes": val.notes,
             "units": sat_unit_json,
             "data": {
-                "xdat": val.xdat,
-                "ydat": val.ydat,
+                "x": val.xdat,
+                "y": val.ydat,
             }
         });
         match &val.xdat_unc {
             Some(x) => {
-                json_out["saturation_curves"][&val.title]["data"]["xdat_unc"] =
-                    Value::from(x.clone())
+                json_out["saturation_curves"][&val.title]["data"]["x_err"] = Value::from(x.clone())
             }
             None => (),
         }
         match &val.ydat_unc {
             Some(y) => {
-                json_out["saturation_curves"][&val.title]["data"]["ydat_unc"] =
-                    Value::from(y.clone())
+                json_out["saturation_curves"][&val.title]["data"]["y_err"] = Value::from(y.clone())
             }
             None => (),
         }
@@ -688,7 +686,7 @@ fn load_config_file(app_entries: &mut TemplateApp) -> Result<(), String> {
 
     app_entries.scheme_ip_term_symbol = scheme["ip_term"].as_str().unwrap_or("").to_owned();
 
-    app_entries.scheme_lasers = match scheme["laser"].as_str() {
+    app_entries.scheme_lasers = match scheme["lasers"].as_str() {
         Some(l) => match l {
             "Ti:Sa" => Lasers::TiSa,
             "Dye" => Lasers::Dye,
@@ -769,19 +767,29 @@ fn load_config_file(app_entries: &mut TemplateApp) -> Result<(), String> {
                 Some("W") => SaturationCurveUnit::W,
                 _ => SaturationCurveUnit::WCM2,
             };
-            let xdat = match value["data"]["xdat"].as_array() {
+            let xdat = match value["data"]["x"].as_array() {
                 Some(x) => json_array_to_f64(x)?,
-                None => return Err("No x data found in the JSON file.".to_string()),
+                None => {
+                    return Err(
+                        format!("No saturation x data found in the JSON file for {title}.")
+                            .to_string(),
+                    )
+                }
             };
-            let ydat = match value["data"]["ydat"].as_array() {
+            let ydat = match value["data"]["y"].as_array() {
                 Some(y) => json_array_to_f64(y)?,
-                None => return Err("No y data found in the JSON file.".to_string()),
+                None => {
+                    return Err(
+                        format!("No saturation y data found in the JSON file for {title}.")
+                            .to_string(),
+                    )
+                }
             };
-            let xunc = match value["data"]["xdat_unc"].as_array() {
+            let xunc = match value["data"]["x_err"].as_array() {
                 Some(x) => Some(json_array_to_f64(x)?),
                 None => None,
             };
-            let yunc = match value["data"]["ydat_unc"].as_array() {
+            let yunc = match value["data"]["y_err"].as_array() {
                 Some(y) => Some(json_array_to_f64(y)?),
                 None => None,
             };
@@ -797,6 +805,12 @@ fn load_config_file(app_entries: &mut TemplateApp) -> Result<(), String> {
         }
     }
     app_entries.saturation_curves = saturation_curves;
+
+    // Load Notes if they are there
+    app_entries.submitted_by = config_json["submitted_by"]
+        .as_str()
+        .unwrap_or("")
+        .to_owned();
 
     Ok(())
 }
