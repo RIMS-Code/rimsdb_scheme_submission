@@ -429,6 +429,7 @@ pub struct SaturationCurve {
     pub title: String,
     pub notes: String,
     pub units: SaturationCurveUnit,
+    pub fit: bool,
     pub xdat: Vec<f64>,
     pub xdat_unc: Option<Vec<f64>>,
     pub ydat: Vec<f64>,
@@ -441,6 +442,7 @@ impl SaturationCurve {
         title: &str,
         notes: &str,
         units: &SaturationCurveUnit,
+        fit: bool,
         xdat: &str,
         xunc: &str,
         ydat: &str,
@@ -481,6 +483,7 @@ impl SaturationCurve {
             title: title.to_owned(),
             notes: notes.to_owned(),
             units: units.clone(),
+            fit,
             xdat,
             xdat_unc,
             ydat,
@@ -619,6 +622,7 @@ fn create_json_output(app_entries: &TemplateApp) -> Result<String, String> {
         json_out["saturation_curves"][&val.title] = json!({
             "notes": val.notes,
             "unit": sat_unit_json,
+            "fit": val.fit,
             "data": {
                 "x": val.xdat,
                 "y": val.ydat,
@@ -767,6 +771,7 @@ fn load_config_file(app_entries: &mut TemplateApp) -> Result<(), String> {
                 Some("W") => SaturationCurveUnit::W,
                 _ => SaturationCurveUnit::WCM2,
             };
+            let fit = value["fit"].as_bool().unwrap_or(true);
             let xdat = match value["data"]["x"].as_array() {
                 Some(x) => json_array_to_f64(x)?,
                 None => {
@@ -797,6 +802,7 @@ fn load_config_file(app_entries: &mut TemplateApp) -> Result<(), String> {
                 title: title.to_owned(),
                 notes,
                 units,
+                fit,
                 xdat,
                 xdat_unc: xunc,
                 ydat,
