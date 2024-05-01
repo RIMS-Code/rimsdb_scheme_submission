@@ -618,7 +618,7 @@ fn create_json_output(app_entries: &TemplateApp) -> Result<String, String> {
 
         json_out["saturation_curves"][&val.title] = json!({
             "notes": val.notes,
-            "units": sat_unit_json,
+            "unit": sat_unit_json,
             "data": {
                 "x": val.xdat,
                 "y": val.ydat,
@@ -763,7 +763,7 @@ fn load_config_file(app_entries: &mut TemplateApp) -> Result<(), String> {
         let sat_json_all = &config_json["saturation_curves"];
         for (title, value) in sat_json_all.as_object().unwrap() {
             let notes = value["notes"].as_str().unwrap_or("").to_owned();
-            let units = match value["units"].as_str() {
+            let units = match value["unit"].as_str() {
                 Some("W") => SaturationCurveUnit::W,
                 _ => SaturationCurveUnit::WCM2,
             };
