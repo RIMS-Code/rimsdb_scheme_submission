@@ -33,6 +33,8 @@ pub struct TemplateApp {
     #[serde(skip)]
     sat_tmp_unit: SaturationCurveUnit,
     #[serde(skip)]
+    sat_tmp_fit: bool,
+    #[serde(skip)]
     sat_tmp_xdat: String,
     #[serde(skip)]
     sat_tmp_xdat_unc: String,
@@ -80,6 +82,7 @@ impl Default for TemplateApp {
             sat_tmp_title: String::new(),
             sat_tmp_notes: String::new(),
             sat_tmp_unit: SaturationCurveUnit::WCM2,
+            sat_tmp_fit: true,
             sat_tmp_xdat: String::new(),
             sat_tmp_xdat_unc: String::new(),
             sat_tmp_ydat: String::new(),
@@ -325,6 +328,7 @@ impl eframe::App for TemplateApp {
                 ui.separator();
                 ui.add_space(VERTICAL_SPACE);
 
+                // SATURATION CURVES
                 ui.heading(RichText::new("Saturation curves").strong());
                 ui.add_space(VERTICAL_SPACE);
 
@@ -352,6 +356,9 @@ impl eframe::App for TemplateApp {
                         SaturationCurveUnit::W.to_string(),
                     );
                 });
+                ui.add_space(VERTICAL_SPACE);
+
+                ui.checkbox(&mut self.sat_tmp_fit, "Fit saturation curve");
                 ui.add_space(VERTICAL_SPACE);
 
                 ui.horizontal(|ui| {
@@ -409,6 +416,7 @@ impl eframe::App for TemplateApp {
                                 &self.sat_tmp_title,
                                 &self.sat_tmp_notes,
                                 &self.sat_tmp_unit,
+                                self.sat_tmp_fit,
                                 &self.sat_tmp_xdat,
                                 &self.sat_tmp_xdat_unc,
                                 &self.sat_tmp_ydat,
@@ -418,6 +426,7 @@ impl eframe::App for TemplateApp {
                                     self.saturation_curves.push(sc);
                                     self.sat_tmp_title.clear();
                                     self.sat_tmp_notes.clear();
+                                    self.sat_tmp_fit = true;
                                     self.sat_tmp_xdat.clear();
                                     self.sat_tmp_xdat_unc.clear();
                                     self.sat_tmp_ydat.clear();
