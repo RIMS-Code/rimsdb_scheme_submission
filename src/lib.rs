@@ -438,6 +438,7 @@ pub struct SaturationCurve {
 
 impl SaturationCurve {
     /// Create a new instance of Saturation curve or return an error if not successful.
+    #[allow(clippy::too_many_arguments)]
     pub fn new_from_parts(
         title: &str,
         notes: &str,

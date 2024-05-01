@@ -357,7 +357,7 @@ impl eframe::App for TemplateApp {
                     );
                 });
                 ui.add_space(VERTICAL_SPACE);
-                
+
                 ui.checkbox(&mut self.sat_tmp_fit, "Fit saturation curve");
                 ui.add_space(VERTICAL_SPACE);
 
