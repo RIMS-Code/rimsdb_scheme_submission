@@ -593,8 +593,6 @@ fn create_json_output(app_entries: &TemplateApp) -> Result<String, String> {
                 "unit": scheme_unit_json,
             },
         },
-        "saturation_curves": {
-        },
         "references": app_entries.references,
         "submitted_by": app_entries.submitted_by,
     });
@@ -614,13 +612,15 @@ fn create_json_output(app_entries: &TemplateApp) -> Result<String, String> {
         }
     }
 
+    let mut sat_curves_arr: Vec<Value> = Vec::new();
     for val in app_entries.saturation_curves.iter() {
         let sat_unit_json = match val.units {
             SaturationCurveUnit::WCM2 => "W * cm^-2",
             SaturationCurveUnit::W => "W",
         };
 
-        json_out["saturation_curves"][&val.title] = json!({
+        let mut json_tmp = json!({
+            "title": val.title,
             "notes": val.notes,
             "unit": sat_unit_json,
             "fit": val.fit,
@@ -630,18 +630,17 @@ fn create_json_output(app_entries: &TemplateApp) -> Result<String, String> {
             }
         });
         match &val.xdat_unc {
-            Some(x) => {
-                json_out["saturation_curves"][&val.title]["data"]["x_err"] = Value::from(x.clone())
-            }
+            Some(x) => json_tmp["data"]["x_err"] = Value::from(x.clone()),
             None => (),
         }
         match &val.ydat_unc {
-            Some(y) => {
-                json_out["saturation_curves"][&val.title]["data"]["y_err"] = Value::from(y.clone())
-            }
+            Some(y) => json_tmp["data"]["y_err"] = Value::from(y.clone()),
             None => (),
         }
+
+        sat_curves_arr.push(json_tmp);
     }
+    json_out["saturation_curves"] = Value::from(sat_curves_arr);
 
     match to_string_pretty(&json_out) {
         Ok(json) => Ok(json),
@@ -763,17 +762,21 @@ fn load_config_file(app_entries: &mut TemplateApp) -> Result<(), String> {
     app_entries.references = references;
 
     // Load saturation curves if they are there
+    let sats = config_json["saturation_curves"].as_array();
     let mut saturation_curves: Vec<SaturationCurve> = Vec::new();
-    if config_json["saturation_curves"].is_object() {
-        let sat_json_all = &config_json["saturation_curves"];
-        for (title, value) in sat_json_all.as_object().unwrap() {
-            let notes = value["notes"].as_str().unwrap_or("").to_owned();
-            let units = match value["unit"].as_str() {
+    if let Some(sats) = sats {
+        for sat in sats {
+            let title = match sat["title"].as_str() {
+                Some(t) => t.to_owned(),
+                None => continue,
+            };
+            let notes = sat["notes"].as_str().unwrap_or("").to_owned();
+            let units = match sat["unit"].as_str() {
                 Some("W") => SaturationCurveUnit::W,
                 _ => SaturationCurveUnit::WCM2,
             };
-            let fit = value["fit"].as_bool().unwrap_or(true);
-            let xdat = match value["data"]["x"].as_array() {
+            let fit = sat["fit"].as_bool().unwrap_or(true);
+            let xdat = match sat["data"]["x"].as_array() {
                 Some(x) => json_array_to_f64(x)?,
                 None => {
                     return Err(
@@ -782,7 +785,7 @@ fn load_config_file(app_entries: &mut TemplateApp) -> Result<(), String> {
                     )
                 }
             };
-            let ydat = match value["data"]["y"].as_array() {
+            let ydat = match sat["data"]["y"].as_array() {
                 Some(y) => json_array_to_f64(y)?,
                 None => {
                     return Err(
@@ -791,16 +794,16 @@ fn load_config_file(app_entries: &mut TemplateApp) -> Result<(), String> {
                     )
                 }
             };
-            let xunc = match value["data"]["x_err"].as_array() {
+            let xunc = match sat["data"]["x_err"].as_array() {
                 Some(x) => Some(json_array_to_f64(x)?),
                 None => None,
             };
-            let yunc = match value["data"]["y_err"].as_array() {
+            let yunc = match sat["data"]["y_err"].as_array() {
                 Some(y) => Some(json_array_to_f64(y)?),
                 None => None,
             };
             saturation_curves.push(SaturationCurve {
-                title: title.to_owned(),
+                title,
                 notes,
                 units,
                 fit,
