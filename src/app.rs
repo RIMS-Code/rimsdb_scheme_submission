@@ -446,19 +446,26 @@ impl eframe::App for TemplateApp {
                 });
                 ui.add_space(VERTICAL_SPACE);
 
+                // Grid view of existing saturation curve
                 if !self.saturation_curves.is_empty() {
-                    ui.label("List of existing saturation curve entries:");
+                    ui.label("Sorted list of existing saturation curve entries:");
                     ui.add_space(VERTICAL_SPACE);
 
                     egui::Grid::new("saturation_curve_table")
                         .striped(true)
-                        .min_col_width(COL_MIN_WIDTH)
                         .show(ui, |ui| {
-                            ui.label("Title of curve");
-                            ui.label("Delete entry?");
-                            ui.end_row();
                             for (it, val) in self.saturation_curves.clone().iter().enumerate() {
                                 ui.label(&val.title);
+
+                                // Move up and down buttons
+                                if ui.button("Move up").clicked() && it > 0 {
+                                    self.saturation_curves.swap(it, it - 1);
+                                }
+                                if ui.button("Move down").clicked() && it < self.saturation_curves.len() - 1 {
+                                    self.saturation_curves.swap(it, it + 1);
+                                }
+
+                                // Delete button
                                 if ui.button("Delete").clicked() {
                                     self.saturation_curves.remove(it);
                                 }
@@ -516,13 +523,20 @@ impl eframe::App for TemplateApp {
 
                     egui::Grid::new("reference_table")
                         .striped(true)
-                        .min_col_width(COL_MIN_WIDTH)
                         .show(ui, |ui| {
-                            ui.label("DOI");
-                            ui.label("Delete entry?");
-                            ui.end_row();
                             for (it, val) in self.references.clone().iter().enumerate() {
+                                // Label
                                 ui.label(val);
+
+                                // Move up and down buttons
+                                if ui.button("Move up").clicked() && it > 0 {
+                                    self.references.swap(it, it - 1);
+                                }
+                                if ui.button("Move down").clicked() && it < self.references.len() - 1 {
+                                    self.references.swap(it, it + 1);
+                                }
+
+                                // Delete button
                                 if ui.button("Delete").clicked() {
                                     self.references.remove(it);
                                 }
