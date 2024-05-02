@@ -396,22 +396,25 @@ impl eframe::App for TemplateApp {
                 ui.add_space(VERTICAL_SPACE);
 
                 ui.horizontal(|ui| {
-                    if ui.button("Add").clicked() {
+                    if ui.button("Add or Update")
+                        .on_hover_text("Add or update the saturation curve with the given title.")
+                        .clicked() {
                         self.error_saturation.clear();
 
                         if self.sat_tmp_title.is_empty() {
                             self.error_saturation = "Title cannot be empty.".to_owned();
-                        } else {
-                            for entry in &self.saturation_curves {
-                                if entry.title.eq(&self.sat_tmp_title) {
-                                    self.error_saturation = "Title already exists.".to_owned();
-                                    break;
-                                }
-                            }
                         }
 
                         // create a new saturation curve object to push to the vec if no previous error
                         if self.error_saturation.is_empty() {
+                            // check if entry already exists
+                            let mut index_exists: Option<usize> = None;
+                            for (index, entry) in self.saturation_curves.clone().iter().enumerate() {
+                                if entry.title.eq(&self.sat_tmp_title) {
+                                    index_exists = Some(index);
+                                    break;
+                                }
+                            }
                             match SaturationCurve::new_from_parts(
                                 &self.sat_tmp_title,
                                 &self.sat_tmp_notes,
@@ -423,7 +426,10 @@ impl eframe::App for TemplateApp {
                                 &self.sat_tmp_ydat_unc,
                             ) {
                                 Ok(sc) => {
-                                    self.saturation_curves.push(sc);
+                                    match index_exists {
+                                        Some(index) => self.saturation_curves[index] = sc,
+                                        None => self.saturation_curves.push(sc),
+                                    };
                                     self.sat_tmp_title.clear();
                                     self.sat_tmp_notes.clear();
                                     self.sat_tmp_fit = true;
@@ -463,6 +469,18 @@ impl eframe::App for TemplateApp {
                                 }
                                 if ui.button("Move down").clicked() && it < self.saturation_curves.len() - 1 {
                                     self.saturation_curves.swap(it, it + 1);
+                                }
+
+                                // Edit button
+                                if ui.button("Edit entry").clicked() {
+                                    self.sat_tmp_title = val.title.clone();
+                                    self.sat_tmp_notes = val.notes.clone();
+                                    self.sat_tmp_unit = val.units.clone();
+                                    self.sat_tmp_fit = val.fit;
+                                    self.sat_tmp_xdat = val.get_xdat();
+                                    self.sat_tmp_xdat_unc = val.get_xdat_unc();
+                                    self.sat_tmp_ydat = val.get_ydat();
+                                    self.sat_tmp_ydat_unc = val.get_ydat_unc();
                                 }
 
                                 // Delete button

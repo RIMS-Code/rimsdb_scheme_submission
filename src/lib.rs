@@ -491,6 +491,46 @@ impl SaturationCurve {
             ydat_unc,
         })
     }
+    
+    pub fn get_xdat(&self) -> String {
+        self.xdat
+            .iter()
+            .map(|x| x.to_string())
+            .collect::<Vec<String>>()
+            .join(", ")
+    }
+    
+    pub fn get_xdat_unc(&self) -> String {
+        if let Some(xdat_unc) = &self.xdat_unc {
+            xdat_unc
+                .iter()
+                .map(|x| x.to_string())
+                .collect::<Vec<String>>()
+                .join(", ")
+        } else {
+            String::new()
+        }
+    }
+    
+    pub fn get_ydat(&self) -> String {
+        self.ydat
+            .iter()
+            .map(|y| y.to_string())
+            .collect::<Vec<String>>()
+            .join(", ")
+    }
+    
+    pub fn get_ydat_unc(&self) -> String {
+        if let Some(ydat_unc) = &self.ydat_unc {
+            ydat_unc
+                .iter()
+                .map(|y| y.to_string())
+                .collect::<Vec<String>>()
+                .join(", ")
+        } else {
+            String::new()
+        }
+    }
 }
 
 #[derive(Debug, PartialEq, serde::Deserialize, serde::Serialize)]
