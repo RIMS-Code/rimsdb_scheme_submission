@@ -491,7 +491,7 @@ impl SaturationCurve {
             ydat_unc,
         })
     }
-    
+
     pub fn get_xdat(&self) -> String {
         self.xdat
             .iter()
@@ -499,7 +499,7 @@ impl SaturationCurve {
             .collect::<Vec<String>>()
             .join(", ")
     }
-    
+
     pub fn get_xdat_unc(&self) -> String {
         if let Some(xdat_unc) = &self.xdat_unc {
             xdat_unc
@@ -511,7 +511,7 @@ impl SaturationCurve {
             String::new()
         }
     }
-    
+
     pub fn get_ydat(&self) -> String {
         self.ydat
             .iter()
@@ -519,7 +519,7 @@ impl SaturationCurve {
             .collect::<Vec<String>>()
             .join(", ")
     }
-    
+
     pub fn get_ydat_unc(&self) -> String {
         if let Some(ydat_unc) = &self.ydat_unc {
             ydat_unc
