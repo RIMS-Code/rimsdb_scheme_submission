@@ -729,7 +729,7 @@ fn load_config_file(app_entries: &mut TemplateApp) -> Result<(), String> {
         term_symbol: scheme["gs_term"].as_str().unwrap_or("").to_owned(),
     };
 
-    app_entries.scheme_ip_term_symbol = scheme["ip_term"].as_str().unwrap_or("").to_owned();
+    app_entries.scheme_ip_term_symbol = scheme["ip_term"].as_str().unwrap_or("").into();
 
     app_entries.scheme_lasers = match scheme["lasers"].as_str() {
         Some(l) => match l {
@@ -788,7 +788,7 @@ fn load_config_file(app_entries: &mut TemplateApp) -> Result<(), String> {
     };
 
     // Load Notes if they are there
-    app_entries.notes = config_json["notes"].as_str().unwrap_or("").to_owned();
+    app_entries.notes = config_json["notes"].as_str().unwrap_or("").into();
 
     // Load References if they are there
     let refs = config_json["references"].as_array();
@@ -860,10 +860,7 @@ fn load_config_file(app_entries: &mut TemplateApp) -> Result<(), String> {
     app_entries.saturation_curves = saturation_curves;
 
     // Load Notes if they are there
-    app_entries.submitted_by = config_json["submitted_by"]
-        .as_str()
-        .unwrap_or("")
-        .to_owned();
+    app_entries.submitted_by = config_json["submitted_by"].as_str().unwrap_or("").into();
 
     Ok(())
 }
