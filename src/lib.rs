@@ -627,6 +627,7 @@ fn create_json_output(app_entries: &TemplateApp) -> Result<String, String> {
             "scheme": {
                 "element": format!("{:?}", app_entries.scheme_element),
                 "lasers": app_entries.scheme_lasers.to_string(),
+                "last_step_to_ip": app_entries.scheme_last_step_to_ip,
                 "gs_term": app_entries.scheme_gs.term_symbol,
                 "gs_level": app_entries.scheme_gs.get_level()?,
                 "ip_term": app_entries.scheme_ip_term_symbol,
@@ -739,6 +740,8 @@ fn load_config_file(app_entries: &mut TemplateApp) -> Result<(), String> {
         },
         None => return Err("No laser type found in the JSON file.".to_string()),
     };
+
+    app_entries.scheme_last_step_to_ip = scheme["last_step_to_ip"].as_bool().unwrap_or(false);
 
     let mut scheme_transitions: [Transition; 7] = [
         Transition::new_empty(),

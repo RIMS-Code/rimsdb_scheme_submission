@@ -20,6 +20,7 @@ pub struct TemplateApp {
     pub scheme_ip_term_symbol: String,
     pub scheme_lasers: Lasers,
     pub scheme_transitions: [Transition; 7],
+    pub scheme_last_step_to_ip: bool,
     pub scheme_unit: TransitionUnit,
     pub submitted_by: String,
     #[serde(skip)]
@@ -77,6 +78,7 @@ impl Default for TemplateApp {
                 Transition::new_empty(),
                 Transition::new_empty(),
             ],
+            scheme_last_step_to_ip: false,
             scheme_unit: TransitionUnit::CM1,
             submitted_by: String::new(),
             sat_tmp_title: String::new(),
@@ -298,6 +300,11 @@ impl eframe::App for TemplateApp {
                         );
                         ui.end_row();
                     });
+                ui.add_space(VERTICAL_SPACE);
+
+                // Last step to IP
+                ui.checkbox(&mut self.scheme_last_step_to_ip, "Draw last step to IP?")
+                    .on_hover_text("Check this box if the last step should be drawn to the ionization potential.");
                 ui.add_space(VERTICAL_SPACE);
 
                 // Lasers
