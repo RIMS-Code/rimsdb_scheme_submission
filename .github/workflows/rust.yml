@@ -25,7 +25,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: wasm32-unknown-unknown
-        run: cargo check
+      - run: cargo check
 
   fmt_lint:
     name: Format and lint
@@ -35,7 +35,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
-        run: |
+      - run: |
           cargo fmt -- --check
           cargo clippy -- -D warnings
 
