@@ -1,6 +1,10 @@
-on: [push, pull_request]
+name: rust-checks
 
-name: CI
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
 
 env:
   # This is required to enable the web_sys clipboard API which egui_web uses
