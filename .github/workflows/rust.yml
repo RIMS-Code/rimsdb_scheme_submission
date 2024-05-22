@@ -1,6 +1,10 @@
-on: [push, pull_request]
+name: rust-checks
 
-name: CI
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
 
 env:
   # This is required to enable the web_sys clipboard API which egui_web uses
@@ -13,92 +17,40 @@ jobs:
     name: Check
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: stable
-          override: true
-      - uses: actions-rs/cargo@v1
-        with:
-          command: check
-          args: --all-features
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - run: cargo check
 
   check_wasm:
     name: Check wasm32
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions-rs/toolchain@v1
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
         with:
-          profile: minimal
-          toolchain: stable
-          target: wasm32-unknown-unknown
-          override: true
-      - uses: actions-rs/cargo@v1
-        with:
-          command: check
-          args: --all-features --lib --target wasm32-unknown-unknown
+          targets: wasm32-unknown-unknown
+      - run: cargo check
 
-  test:
-    name: Test Suite
+  fmt_lint:
+    name: Format and lint
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions-rs/toolchain@v1
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
         with:
-          profile: minimal
-          toolchain: stable
-          override: true
-      - run: sudo apt-get install libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev libxkbcommon-dev libssl-dev
-      - uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: --lib
-
-  fmt:
-    name: Rustfmt
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: stable
-          override: true
-          components: rustfmt
-      - uses: actions-rs/cargo@v1
-        with:
-          command: fmt
-          args: --all -- --check
-
-  clippy:
-    name: Clippy
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: stable
-          override: true
-          components: clippy
-      - uses: actions-rs/cargo@v1
-        with:
-          command: clippy
-          args: -- -D warnings
+          components: rustfmt, clippy
+      - run: |
+          cargo fmt -- --check
+          cargo clippy -- -D warnings
 
   trunk:
     name: trunk
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions-rs/toolchain@v1
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
         with:
-          profile: minimal
-          toolchain: 1.77.0
-          target: wasm32-unknown-unknown
-          override: true
+          targets: wasm32-unknown-unknown
       - name: Download and install Trunk binary
         run: wget -qO- https://github.com/thedodd/trunk/releases/latest/download/trunk-x86_64-unknown-linux-gnu.tar.gz | tar -xzf-
       - name: Build

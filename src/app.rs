@@ -20,6 +20,7 @@ pub struct TemplateApp {
     pub scheme_ip_term_symbol: String,
     pub scheme_lasers: Lasers,
     pub scheme_transitions: [Transition; 7],
+    pub scheme_last_step_to_ip: bool,
     pub scheme_unit: TransitionUnit,
     pub submitted_by: String,
     #[serde(skip)]
@@ -77,6 +78,7 @@ impl Default for TemplateApp {
                 Transition::new_empty(),
                 Transition::new_empty(),
             ],
+            scheme_last_step_to_ip: false,
             scheme_unit: TransitionUnit::CM1,
             submitted_by: String::new(),
             sat_tmp_title: String::new(),
@@ -300,6 +302,11 @@ impl eframe::App for TemplateApp {
                     });
                 ui.add_space(VERTICAL_SPACE);
 
+                // Last step to IP
+                ui.checkbox(&mut self.scheme_last_step_to_ip, "Draw last step to IP?")
+                    .on_hover_text("Check this box if the last step should be drawn to the ionization potential.");
+                ui.add_space(VERTICAL_SPACE);
+
                 // Lasers
                 ui.horizontal(|ui| {
                     ui.label("Lasers:");
@@ -402,7 +409,7 @@ impl eframe::App for TemplateApp {
                         self.error_saturation.clear();
 
                         if self.sat_tmp_title.is_empty() {
-                            self.error_saturation = "Title cannot be empty.".to_owned();
+                            self.error_saturation = "Title cannot be empty.".into();
                         }
 
                         // create a new saturation curve object to push to the vec if no previous error
@@ -473,8 +480,8 @@ impl eframe::App for TemplateApp {
 
                                 // Edit button
                                 if ui.button("Edit entry").clicked() {
-                                    self.sat_tmp_title = val.title.clone();
-                                    self.sat_tmp_notes = val.notes.clone();
+                                    self.sat_tmp_title.clone_from(&val.title);
+                                    self.sat_tmp_notes.clone_from(&val.notes);
                                     self.sat_tmp_unit = val.units.clone();
                                     self.sat_tmp_fit = val.fit;
                                     self.sat_tmp_xdat = val.get_xdat();
@@ -515,14 +522,14 @@ impl eframe::App for TemplateApp {
                     {
                         if !self.reference_entry.is_empty() {
                             if self.references.contains(&self.reference_entry) {
-                                self.error_reference = "Reference already in list.".to_owned();
+                                self.error_reference = "Reference already in list.".into();
                             } else {
                                 self.references.push(self.reference_entry.clone());
                                 self.reference_entry.clear();
                                 self.error_reference.clear();
                             }
                         } else {
-                            self.error_reference = "Reference is empty.".to_owned();
+                            self.error_reference = "Reference is empty.".into();
                         };
                     };
                     if !self.error_reference.is_empty() {
@@ -583,7 +590,7 @@ impl eframe::App for TemplateApp {
                         .clicked() {
                         self.error_submission.clear();
                         let body = create_json_output(self).unwrap_or_else(|e| {
-                            self.error_submission = format!("Error creating JSON output: {}", e).to_owned();
+                            self.error_submission = format!("Error creating JSON output: {}", e);
                             "".to_owned()
                         });
                         let url = create_gh_issue(&body, &self.scheme_element);
@@ -600,7 +607,7 @@ impl eframe::App for TemplateApp {
                         .clicked() {
                         self.error_submission.clear();
                         let body = create_json_output(self).unwrap_or_else(|e| {
-                            self.error_submission = format!("Error creating JSON output: {}", e).to_owned();
+                            self.error_submission = format!("Error creating JSON output: {}", e);
                             "".to_owned()
                         });
                         let url = create_email_link(&body, &self.scheme_element);
@@ -615,7 +622,7 @@ impl eframe::App for TemplateApp {
                     if ui.button("Download configuration").clicked() {
                         self.error_submission.clear();
                         let body = create_json_output(self).unwrap_or_else(|e| {
-                            self.error_submission = format!("Error creating JSON output: {}", e).to_owned();
+                            self.error_submission = format!("Error creating JSON output: {}", e);
                             "".to_owned()
                         });
                         if !body.is_empty() {
@@ -638,7 +645,7 @@ impl eframe::App for TemplateApp {
                     if cfg!(debug_assertions) && ui.button("Test").clicked() {
                         self.error_submission.clear();
                         let body = create_json_output(self).unwrap_or_else(|e| {
-                            self.error_submission = format!("Error creating JSON output: {}", e).to_owned();
+                            self.error_submission = format!("Error creating JSON output: {}", e);
                             "".to_owned()
                         });
                         println!("{}", body);
