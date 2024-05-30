@@ -617,7 +617,9 @@ fn create_json_output(app_entries: &TemplateApp) -> Result<String, String> {
 
     // error checking
     if app_entries.scheme_transitions[0].level.is_empty() {
-        return Err("No transitions entered: Please add at least one step.".to_owned());
+        return Err("No transitions entered: Please add at least one step.".into());
+    } else if app_entries.submitted_by.is_empty() {
+        return Err("Please enter your name.".into());
     }
 
     // create the json file
