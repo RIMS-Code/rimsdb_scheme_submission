@@ -600,20 +600,8 @@ impl ReferenceEntry {
         ReferenceEntry {
             id: url.into(),
             authors: authors.into(),
-            year
+            year,
         }
-    }
-
-    fn is_doi(&self) -> bool {
-        self.year == 0
-    }
-
-    fn get_doi(&self) -> String {
-        self.id.clone()
-    }
-
-    fn get_url(&self) -> (String, String, usize) {
-        (self.id.clone(), self.authors.clone(), self.year)
     }
 }
 
@@ -829,20 +817,29 @@ fn load_config_file(app_entries: &mut TemplateApp) -> Result<(), String> {
     // Load Notes if they are there
     app_entries.notes = config_json["notes"].as_str().unwrap_or("").into();
 
-    // fixme
     // Load References if they are there
     let refs = config_json["references"].as_array();
-    let mut references: Vec<String> = Vec::new();
+    let mut references: Vec<ReferenceEntry> = Vec::new();
     if let Some(refs) = refs {
         for r in refs {
-            let r_str = match r.as_str() {
+            let rid = match r["id"].as_str() {
                 Some(s) => s,
                 None => continue,
             };
-            references.push(r_str.to_owned());
+            let rauth = r["authors"].as_str().unwrap_or("");
+            let ryear = match r["year"].as_u64() {
+                Some(y) => y as usize,
+                None => 0_usize,
+            };
+
+            if rauth.is_empty() && ryear == 0 {
+                references.push(ReferenceEntry::new_from_doi(rid))
+            } else {
+                references.push(ReferenceEntry::new_from_url(rid, rauth, ryear))
+            }
         }
-    }
-    // app_entries.references = references; fixme
+    };
+    app_entries.references = references;
 
     // Load saturation curves if they are there
     let sats = config_json["saturation_curves"].as_array();
@@ -929,7 +926,7 @@ fn json_array_to_f64(data: &Vec<Value>) -> Result<Vec<f64>, String> {
 
 /// Check if a given string is a doi or not.
 /// DOIs contain one slash.
-pub fn is_doi(inp: &str) -> bool {
+fn is_doi(inp: &str) -> bool {
     inp.chars().filter(|c| *c == '/').count() == 1
 }
 
