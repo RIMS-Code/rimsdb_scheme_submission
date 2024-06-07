@@ -580,6 +580,43 @@ impl Transition {
     }
 }
 
+#[derive(Clone, Debug, serde::Deserialize, serde::Serialize)]
+pub struct ReferenceEntry {
+    id: String,
+    authors: String,
+    year: usize,
+}
+
+impl ReferenceEntry {
+    fn new_from_doi(doi: &str) -> Self {
+        ReferenceEntry {
+            id: doi.into(),
+            authors: String::new(),
+            year: 0,
+        }
+    }
+
+    fn new_from_url(url: &str, authors: &str, year: usize) -> Self {
+        ReferenceEntry {
+            id: url.into(),
+            authors: authors.into(),
+            year
+        }
+    }
+
+    fn is_doi(&self) -> bool {
+        self.year == 0
+    }
+
+    fn get_doi(&self) -> String {
+        self.id.clone()
+    }
+
+    fn get_url(&self) -> (String, String, usize) {
+        (self.id.clone(), self.authors.clone(), self.year)
+    }
+}
+
 /// Create email content and link and fill it
 fn create_email_link(body: &str, element: &Elements) -> String {
     let newline = "%0D%0A";
@@ -792,6 +829,7 @@ fn load_config_file(app_entries: &mut TemplateApp) -> Result<(), String> {
     // Load Notes if they are there
     app_entries.notes = config_json["notes"].as_str().unwrap_or("").into();
 
+    // fixme
     // Load References if they are there
     let refs = config_json["references"].as_array();
     let mut references: Vec<String> = Vec::new();
@@ -804,7 +842,7 @@ fn load_config_file(app_entries: &mut TemplateApp) -> Result<(), String> {
             references.push(r_str.to_owned());
         }
     }
-    app_entries.references = references;
+    // app_entries.references = references; fixme
 
     // Load saturation curves if they are there
     let sats = config_json["saturation_curves"].as_array();
@@ -889,6 +927,12 @@ fn json_array_to_f64(data: &Vec<Value>) -> Result<Vec<f64>, String> {
     Ok(x_data)
 }
 
+/// Check if a given string is a doi or not.
+/// DOIs contain one slash.
+pub fn is_doi(inp: &str) -> bool {
+    inp.chars().filter(|c| *c == '/').count() == 1
+}
+
 #[cfg(test)]
 #[test]
 fn test_parse_element() {
@@ -921,4 +965,12 @@ fn test_parse_element() {
     assert_eq!(Elements::from_str("Co").unwrap(), Elements::Co);
     assert_eq!(Elements::from_str("Ni").unwrap(), Elements::Ni);
     assert_eq!(Elements::from_str("Cu").unwrap(), Elements::Cu);
+}
+
+#[test]
+fn test_is_doi() {
+    let doi_good = "10.500/123456789";
+    assert!(is_doi(doi_good));
+    let doi_bad = "https://doi.org/10.500/123456789";
+    assert!(!is_doi(doi_bad));
 }
