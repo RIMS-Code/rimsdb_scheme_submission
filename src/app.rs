@@ -541,12 +541,18 @@ impl eframe::App for TemplateApp {
                     .on_hover_text("Add the current reference to the list.")
                     .clicked()
                 {
+                    let mut index_exists: Option<usize> = None;
+                    for (index, entry) in self.references.clone().iter().enumerate() {
+                        if entry.id.eq(&self.reference_id) {
+                            index_exists = Some(index);
+                            break;
+                        }
+                    }
+                    
                     let mut reference_to_write: Option<ReferenceEntry> = None;
 
                     if !self.reference_id.is_empty() {
-                        if self.references.iter().filter(|e| *e.id == self.reference_id).count() > 0 {  // check if already in list
-                            self.error_reference = "Reference already in list.".into();
-                        } else if self.reference_authors.is_empty() || self.reference_year.is_empty() {  // so we have a doi
+                        if self.reference_authors.is_empty() || self.reference_year.is_empty() {  // so we have a doi
                             if is_doi(&self.reference_id) {
                                 reference_to_write = Some(ReferenceEntry::new_from_doi(&self.reference_id));
                             } else {
@@ -563,7 +569,10 @@ impl eframe::App for TemplateApp {
                     };
 
                     if let Some(entry) = reference_to_write {
-                        self.references.push(entry);
+                        match index_exists {
+                            Some(index) => self.references[index] = entry,
+                            None => self.references.push(entry)
+                        };
                         self.reference_id.clear();
                         self.reference_authors.clear();
                         self.reference_year.clear();
@@ -602,6 +611,16 @@ impl eframe::App for TemplateApp {
                                 }
                                 if ui.button("Move down").clicked() && it < self.references.len() - 1 {
                                     self.references.swap(it, it + 1);
+                                }
+
+                                // Edit button
+                                if ui.button("Edit entry").clicked() {
+                                    self.reference_id = val.id.clone();
+                                    self.reference_authors = val.authors.clone();
+                                    self.reference_year = match val.year {
+                                        0 => String::new(),
+                                        _ => val.year.to_string(),
+                                    };
                                 }
 
                                 // Delete button
