@@ -537,7 +537,7 @@ impl eframe::App for TemplateApp {
 
 
                 if ui
-                    .button("Add")
+                    .button("Add or Update")
                     .on_hover_text("Add the current reference to the list.")
                     .clicked()
                 {
@@ -548,7 +548,7 @@ impl eframe::App for TemplateApp {
                             break;
                         }
                     }
-                    
+
                     let mut reference_to_write: Option<ReferenceEntry> = None;
 
                     if !self.reference_id.is_empty() {
