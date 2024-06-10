@@ -589,7 +589,12 @@ impl eframe::App for TemplateApp {
                         .show(ui, |ui| {
                             for (it, val) in self.references.clone().iter().enumerate() {
                                 // Label
-                                ui.label(&val.id);
+                                let lbl_hover_text = if val.year == 0 && val.authors.is_empty() {
+                                    format!("https://doi.org/{}", val.id)
+                                } else {
+                                    format!("{} ({})", val.authors, val.year)
+                                };
+                                ui.label(&val.id).on_hover_text(lbl_hover_text);
 
                                 // Move up and down buttons
                                 if ui.button("Move up").clicked() && it > 0 {
@@ -774,7 +779,7 @@ Each field needs to contain the same number of values. \
 Values can be separated by comma, semicolon, or space.";
 
 const USAGE_MESSAGE_REFERENCE: &str = "You can either provide only a `doi` (leaving the author and year fields empty \
-or you can provide an URL to an article followed as well as an author name and year. \
+or you can provide a URL to an article as well as an author name and year. \
 Please provide the author name in the same way as it should be displayed, i.e., \"Chrysalidis et al.\".";
 
 // const USAGE_MESSAGE_SATURATION: &str = "The saturation part of the submission is optional. \
