@@ -603,6 +603,15 @@ impl ReferenceEntry {
             year,
         }
     }
+    
+    fn get_url(&self) -> String {
+        if self.authors.is_empty() && self.year == 0 {
+            format!("https://doi.org/{}", self.id)
+        } else {
+            self.id.clone()
+        }
+    }
+    
 }
 
 /// Create email content and link and fill it

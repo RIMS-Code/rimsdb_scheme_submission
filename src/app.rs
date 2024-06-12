@@ -605,6 +605,15 @@ impl eframe::App for TemplateApp {
                                 };
                                 ui.label(&val.id).on_hover_text(lbl_hover_text);
 
+                                // Check URL button
+                                if ui.button("Open URL").clicked() {
+                                    let open_url = egui::OpenUrl {
+                                        url: val.get_url(),
+                                        new_tab: true,
+                                    };
+                                    ui.ctx().open_url(open_url);
+                                }
+                                
                                 // Move up and down buttons
                                 if ui.button("Move up").clicked() && it > 0 {
                                     self.references.swap(it, it - 1);
