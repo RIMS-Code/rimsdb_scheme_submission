@@ -613,7 +613,7 @@ impl eframe::App for TemplateApp {
                                     };
                                     ui.ctx().open_url(open_url);
                                 }
-                                
+
                                 // Move up and down buttons
                                 if ui.button("Move up").clicked() && it > 0 {
                                     self.references.swap(it, it - 1);
@@ -624,8 +624,8 @@ impl eframe::App for TemplateApp {
 
                                 // Edit button
                                 if ui.button("Edit entry").clicked() {
-                                    self.reference_id = val.id.clone();
-                                    self.reference_authors = val.authors.clone();
+                                    self.reference_id.clone_from(&val.id);
+                                    self.reference_authors.clone_from(&val.authors);
                                     self.reference_year = match val.year {
                                         0 => String::new(),
                                         _ => val.year.to_string(),
