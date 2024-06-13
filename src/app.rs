@@ -4,8 +4,9 @@ use std::sync::mpsc::{channel, Receiver, Sender};
 use strum::IntoEnumIterator;
 
 use crate::{
-    create_email_link, create_gh_issue, create_json_output, load_config_file, Elements,
-    GroundState, Lasers, SaturationCurve, SaturationCurveUnit, Transition, TransitionUnit,
+    create_email_link, create_gh_issue, create_json_output, is_doi, load_config_file, Elements,
+    GroundState, Lasers, ReferenceEntry, SaturationCurve, SaturationCurveUnit, Transition,
+    TransitionUnit,
 };
 
 /// We derive Deserialize/Serialize to persist app state on shutdown.
@@ -13,7 +14,7 @@ use crate::{
 #[serde(default)] // if we add new fields, give them default values when deserializing old state
 pub struct TemplateApp {
     pub notes: String,
-    pub references: Vec<String>,
+    pub references: Vec<ReferenceEntry>,
     pub saturation_curves: Vec<SaturationCurve>,
     pub scheme_element: Elements,
     pub scheme_gs: GroundState,
@@ -23,8 +24,6 @@ pub struct TemplateApp {
     pub scheme_last_step_to_ip: bool,
     pub scheme_unit: TransitionUnit,
     pub submitted_by: String,
-    #[serde(skip)]
-    reference_entry: String,
     #[serde(skip)]
     pub rimsschemedrawer_in: String,
     #[serde(skip)]
@@ -46,6 +45,12 @@ pub struct TemplateApp {
     #[serde(skip)]
     text_channel: (Sender<String>, Receiver<String>),
     #[serde(skip)]
+    reference_id: String,
+    #[serde(skip)]
+    reference_authors: String,
+    #[serde(skip)]
+    reference_year: String,
+    #[serde(skip)]
     error_reference: String,
     #[serde(skip)]
     error_rimsschemedrawer_in: String,
@@ -60,7 +65,6 @@ impl Default for TemplateApp {
         Self {
             notes: String::new(),
             references: Vec::new(),
-            reference_entry: String::new(),
             saturation_curves: Vec::new(),
             scheme_element: Elements::H,
             scheme_gs: GroundState {
@@ -91,6 +95,9 @@ impl Default for TemplateApp {
             sat_tmp_ydat_unc: String::new(),
             rimsschemedrawer_in: String::new(),
             text_channel: channel(),
+            reference_id: String::new(),
+            reference_authors: String::new(),
+            reference_year: String::new(),
             error_reference: String::new(),
             error_rimsschemedrawer_in: String::new(),
             error_saturation: String::new(),
@@ -511,35 +518,75 @@ impl eframe::App for TemplateApp {
                 });
                 ui.add_space(VERTICAL_SPACE);
 
-                ui.horizontal(|ui| {
-                    ui.label("Enter DOI:");
-                    ui.text_edit_singleline(&mut self.reference_entry)
-                        .on_hover_text("Enter the DOI of the reference here.");
-                    if ui
-                        .button("Add")
-                        .on_hover_text("Add the current reference to the list.")
-                        .clicked()
-                    {
-                        if !self.reference_entry.is_empty() {
-                            if self.references.contains(&self.reference_entry) {
-                                self.error_reference = "Reference already in list.".into();
-                            } else {
-                                self.references.push(self.reference_entry.clone());
-                                self.reference_entry.clear();
-                                self.error_reference.clear();
-                            }
-                        } else {
-                            self.error_reference = "Reference is empty.".into();
-                        };
-                    };
-                    if !self.error_reference.is_empty() {
-                        ui.label(
-                            RichText::new(&self.error_reference)
-                                .color(egui::Color32::RED)
-                                .strong(),
-                        );
+                egui::Grid::new("reference_entry_grid")
+                    .min_col_width(COL_MIN_WIDTH)
+                    .striped(false)
+                    .show(ui, |ui|{
+                        ui.label("Enter DOI or URL to reference:");
+                        ui.text_edit_singleline(&mut self.reference_id)
+                            .on_hover_text("Enter the DOI only or an URL to the reference here.");
+                        ui.end_row();
+                        ui.label("Enter author names to be displayed:");
+                        ui.text_edit_singleline(&mut self.reference_authors)
+                            .on_hover_text("Example: Wendt, Shulaker and Savina, Rothe et al.");
+                        ui.end_row();
+                        ui.label("Enter year (4 digits):");
+                        ui.text_edit_singleline(&mut self.reference_year);
+                    });
+                ui.add_space(VERTICAL_SPACE);
+
+
+                if ui
+                    .button("Add or Update")
+                    .on_hover_text("Add the current reference to the list.")
+                    .clicked()
+                {
+                    let mut index_exists: Option<usize> = None;
+                    for (index, entry) in self.references.clone().iter().enumerate() {
+                        if entry.id.eq(&self.reference_id) {
+                            index_exists = Some(index);
+                            break;
+                        }
                     }
-                });
+
+                    let mut reference_to_write: Option<ReferenceEntry> = None;
+
+                    if !self.reference_id.is_empty() {
+                        if self.reference_authors.is_empty() || self.reference_year.is_empty() {  // so we have a doi
+                            if is_doi(&self.reference_id) {
+                                reference_to_write = Some(ReferenceEntry::new_from_doi(&self.reference_id));
+                            } else {
+                                self.error_reference = "This does not look like a DOI. If that is intentional, please fill in the Author and Year data.".into();
+                            }
+                        } else {  // so we have an URL with entries everywhere
+                            match self.reference_year.parse::<usize>() {
+                                Ok(year) => reference_to_write = Some(ReferenceEntry::new_from_url(&self.reference_id, &self.reference_authors, year)),
+                                Err(_) => self.error_reference = "Cannot parse year. Please check it is a number.".into(),
+                            };
+                        };
+                    } else {
+                        self.error_reference = "Reference is empty".into();
+                    };
+
+                    if let Some(entry) = reference_to_write {
+                        match index_exists {
+                            Some(index) => self.references[index] = entry,
+                            None => self.references.push(entry)
+                        };
+                        self.reference_id.clear();
+                        self.reference_authors.clear();
+                        self.reference_year.clear();
+                        self.error_reference.clear();
+                    }
+
+                };
+                ui.add_space(VERTICAL_SPACE);
+
+                ui.label(
+                    RichText::new(&self.error_reference)
+                        .color(egui::Color32::RED)
+                        .strong(),
+                );
                 ui.add_space(VERTICAL_SPACE);
 
                 if !self.references.is_empty() {
@@ -551,7 +598,21 @@ impl eframe::App for TemplateApp {
                         .show(ui, |ui| {
                             for (it, val) in self.references.clone().iter().enumerate() {
                                 // Label
-                                ui.label(val);
+                                let lbl_hover_text = if val.year == 0 && val.authors.is_empty() {
+                                    format!("https://doi.org/{}", val.id)
+                                } else {
+                                    format!("{} ({})", val.authors, val.year)
+                                };
+                                ui.label(&val.id).on_hover_text(lbl_hover_text);
+
+                                // Check URL button
+                                if ui.button("Open URL").clicked() {
+                                    let open_url = egui::OpenUrl {
+                                        url: val.get_url(),
+                                        new_tab: true,
+                                    };
+                                    ui.ctx().open_url(open_url);
+                                }
 
                                 // Move up and down buttons
                                 if ui.button("Move up").clicked() && it > 0 {
@@ -559,6 +620,16 @@ impl eframe::App for TemplateApp {
                                 }
                                 if ui.button("Move down").clicked() && it < self.references.len() - 1 {
                                     self.references.swap(it, it + 1);
+                                }
+
+                                // Edit button
+                                if ui.button("Edit entry").clicked() {
+                                    self.reference_id.clone_from(&val.id);
+                                    self.reference_authors.clone_from(&val.authors);
+                                    self.reference_year = match val.year {
+                                        0 => String::new(),
+                                        _ => val.year.to_string(),
+                                    };
                                 }
 
                                 // Delete button
@@ -735,12 +806,9 @@ Finally, data can be pasted, e.g., from Excel, into the individual field. \
 Each field needs to contain the same number of values. \
 Values can be separated by comma, semicolon, or space.";
 
-const USAGE_MESSAGE_REFERENCE: &str = "Please provide the DOI of the reference that you \
-want to use for this scheme. You can add multiple references. \
-To do so, enter a DOI, click the 'Add' button, and repeat the process.";
-
-// const USAGE_MESSAGE_SATURATION: &str = "The saturation part of the submission is optional. \
-// Please select the units that you would like to use. Then fill out the ...";
+const USAGE_MESSAGE_REFERENCE: &str = "You can either provide only a `doi` (leaving the author and year fields empty) \
+or you can provide a URL to an article as well as an author name and year. \
+Please provide the author name in the same way as it should be displayed, e.g., \"Chrysalidis et al.\".";
 
 const COL_MIN_WIDTH: f32 = 120.0;
 const TEXT_INPUT_WIDTH: f32 = f32::INFINITY;

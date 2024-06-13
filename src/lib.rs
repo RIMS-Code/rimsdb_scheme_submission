@@ -580,6 +580,39 @@ impl Transition {
     }
 }
 
+#[derive(Clone, Debug, serde::Deserialize, serde::Serialize)]
+pub struct ReferenceEntry {
+    id: String,
+    authors: String,
+    year: usize,
+}
+
+impl ReferenceEntry {
+    fn new_from_doi(doi: &str) -> Self {
+        ReferenceEntry {
+            id: doi.into(),
+            authors: String::new(),
+            year: 0,
+        }
+    }
+
+    fn new_from_url(url: &str, authors: &str, year: usize) -> Self {
+        ReferenceEntry {
+            id: url.into(),
+            authors: authors.into(),
+            year,
+        }
+    }
+
+    fn get_url(&self) -> String {
+        if self.authors.is_empty() && self.year == 0 {
+            format!("https://doi.org/{}", self.id)
+        } else {
+            self.id.clone()
+        }
+    }
+}
+
 /// Create email content and link and fill it
 fn create_email_link(body: &str, element: &Elements) -> String {
     let newline = "%0D%0A";
@@ -794,16 +827,26 @@ fn load_config_file(app_entries: &mut TemplateApp) -> Result<(), String> {
 
     // Load References if they are there
     let refs = config_json["references"].as_array();
-    let mut references: Vec<String> = Vec::new();
+    let mut references: Vec<ReferenceEntry> = Vec::new();
     if let Some(refs) = refs {
         for r in refs {
-            let r_str = match r.as_str() {
+            let rid = match r["id"].as_str() {
                 Some(s) => s,
                 None => continue,
             };
-            references.push(r_str.to_owned());
+            let rauth = r["authors"].as_str().unwrap_or("");
+            let ryear = match r["year"].as_u64() {
+                Some(y) => y as usize,
+                None => 0_usize,
+            };
+
+            if rauth.is_empty() && ryear == 0 {
+                references.push(ReferenceEntry::new_from_doi(rid))
+            } else {
+                references.push(ReferenceEntry::new_from_url(rid, rauth, ryear))
+            }
         }
-    }
+    };
     app_entries.references = references;
 
     // Load saturation curves if they are there
@@ -889,6 +932,12 @@ fn json_array_to_f64(data: &Vec<Value>) -> Result<Vec<f64>, String> {
     Ok(x_data)
 }
 
+/// Check if a given string is a doi or not.
+/// DOIs contain one slash.
+fn is_doi(inp: &str) -> bool {
+    inp.chars().filter(|c| *c == '/').count() == 1
+}
+
 #[cfg(test)]
 #[test]
 fn test_parse_element() {
@@ -921,4 +970,12 @@ fn test_parse_element() {
     assert_eq!(Elements::from_str("Co").unwrap(), Elements::Co);
     assert_eq!(Elements::from_str("Ni").unwrap(), Elements::Ni);
     assert_eq!(Elements::from_str("Cu").unwrap(), Elements::Cu);
+}
+
+#[test]
+fn test_is_doi() {
+    let doi_good = "10.500/123456789";
+    assert!(is_doi(doi_good));
+    let doi_bad = "https://doi.org/10.500/123456789";
+    assert!(!is_doi(doi_bad));
 }
