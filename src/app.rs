@@ -806,12 +806,9 @@ Finally, data can be pasted, e.g., from Excel, into the individual field. \
 Each field needs to contain the same number of values. \
 Values can be separated by comma, semicolon, or space.";
 
-const USAGE_MESSAGE_REFERENCE: &str = "You can either provide only a `doi` (leaving the author and year fields empty \
+const USAGE_MESSAGE_REFERENCE: &str = "You can either provide only a `doi` (leaving the author and year fields empty) \
 or you can provide a URL to an article as well as an author name and year. \
-Please provide the author name in the same way as it should be displayed, i.e., \"Chrysalidis et al.\".";
-
-// const USAGE_MESSAGE_SATURATION: &str = "The saturation part of the submission is optional. \
-// Please select the units that you would like to use. Then fill out the ...";
+Please provide the author name in the same way as it should be displayed, e.g., \"Chrysalidis et al.\".";
 
 const COL_MIN_WIDTH: f32 = 120.0;
 const TEXT_INPUT_WIDTH: f32 = f32::INFINITY;
