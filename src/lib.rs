@@ -583,7 +583,7 @@ impl Transition {
 #[derive(Clone, Debug, serde::Deserialize, serde::Serialize)]
 pub struct ReferenceEntry {
     id: String,
-    authors: String,
+    author: String,
     year: usize,
 }
 
@@ -591,21 +591,21 @@ impl ReferenceEntry {
     fn new_from_doi(doi: &str) -> Self {
         ReferenceEntry {
             id: doi.into(),
-            authors: String::new(),
+            author: String::new(),
             year: 0,
         }
     }
 
-    fn new_from_url(url: &str, authors: &str, year: usize) -> Self {
+    fn new_from_url(url: &str, author: &str, year: usize) -> Self {
         ReferenceEntry {
             id: url.into(),
-            authors: authors.into(),
+            author: author.into(),
             year,
         }
     }
 
     fn get_url(&self) -> String {
-        if self.authors.is_empty() && self.year == 0 {
+        if self.author.is_empty() && self.year == 0 {
             format!("https://doi.org/{}", self.id)
         } else {
             self.id.clone()
@@ -834,7 +834,7 @@ fn load_config_file(app_entries: &mut TemplateApp) -> Result<(), String> {
                 Some(s) => s,
                 None => continue,
             };
-            let rauth = r["authors"].as_str().unwrap_or("");
+            let rauth = r["author"].as_str().unwrap_or("");
             let ryear = match r["year"].as_u64() {
                 Some(y) => y as usize,
                 None => 0_usize,

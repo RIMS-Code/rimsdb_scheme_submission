@@ -47,7 +47,7 @@ pub struct TemplateApp {
     #[serde(skip)]
     reference_id: String,
     #[serde(skip)]
-    reference_authors: String,
+    reference_author: String,
     #[serde(skip)]
     reference_year: String,
     #[serde(skip)]
@@ -96,7 +96,7 @@ impl Default for TemplateApp {
             rimsschemedrawer_in: String::new(),
             text_channel: channel(),
             reference_id: String::new(),
-            reference_authors: String::new(),
+            reference_author: String::new(),
             reference_year: String::new(),
             error_reference: String::new(),
             error_rimsschemedrawer_in: String::new(),
@@ -527,7 +527,7 @@ impl eframe::App for TemplateApp {
                             .on_hover_text("Enter the DOI only or an URL to the reference here.");
                         ui.end_row();
                         ui.label("Enter author names to be displayed:");
-                        ui.text_edit_singleline(&mut self.reference_authors)
+                        ui.text_edit_singleline(&mut self.reference_author)
                             .on_hover_text("Example: Wendt, Shulaker and Savina, Rothe et al.");
                         ui.end_row();
                         ui.label("Enter year (4 digits):");
@@ -552,7 +552,7 @@ impl eframe::App for TemplateApp {
                     let mut reference_to_write: Option<ReferenceEntry> = None;
 
                     if !self.reference_id.is_empty() {
-                        if self.reference_authors.is_empty() || self.reference_year.is_empty() {  // so we have a doi
+                        if self.reference_author.is_empty() || self.reference_year.is_empty() {  // so we have a doi
                             if is_doi(&self.reference_id) {
                                 reference_to_write = Some(ReferenceEntry::new_from_doi(&self.reference_id));
                             } else {
@@ -560,7 +560,7 @@ impl eframe::App for TemplateApp {
                             }
                         } else {  // so we have an URL with entries everywhere
                             match self.reference_year.parse::<usize>() {
-                                Ok(year) => reference_to_write = Some(ReferenceEntry::new_from_url(&self.reference_id, &self.reference_authors, year)),
+                                Ok(year) => reference_to_write = Some(ReferenceEntry::new_from_url(&self.reference_id, &self.reference_author, year)),
                                 Err(_) => self.error_reference = "Cannot parse year. Please check it is a number.".into(),
                             };
                         };
@@ -574,7 +574,7 @@ impl eframe::App for TemplateApp {
                             None => self.references.push(entry)
                         };
                         self.reference_id.clear();
-                        self.reference_authors.clear();
+                        self.reference_author.clear();
                         self.reference_year.clear();
                         self.error_reference.clear();
                     }
@@ -598,10 +598,10 @@ impl eframe::App for TemplateApp {
                         .show(ui, |ui| {
                             for (it, val) in self.references.clone().iter().enumerate() {
                                 // Label
-                                let lbl_hover_text = if val.year == 0 && val.authors.is_empty() {
+                                let lbl_hover_text = if val.year == 0 && val.author.is_empty() {
                                     format!("https://doi.org/{}", val.id)
                                 } else {
-                                    format!("{} ({})", val.authors, val.year)
+                                    format!("{} ({})", val.author, val.year)
                                 };
                                 ui.label(&val.id).on_hover_text(lbl_hover_text);
 
@@ -625,7 +625,7 @@ impl eframe::App for TemplateApp {
                                 // Edit button
                                 if ui.button("Edit entry").clicked() {
                                     self.reference_id.clone_from(&val.id);
-                                    self.reference_authors.clone_from(&val.authors);
+                                    self.reference_author.clone_from(&val.author);
                                     self.reference_year = match val.year {
                                         0 => String::new(),
                                         _ => val.year.to_string(),
