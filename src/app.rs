@@ -654,6 +654,14 @@ impl eframe::App for TemplateApp {
                 ui.add_space(VERTICAL_SPACE);
 
                 ui.separator();
+                ui.add_space(VERTICAL_SPACE);
+
+
+                ui.collapsing("How to submit?", |ui| {
+                    ui.label(RichText::new(USAGE_MESSAGE_SUBMISSION));
+                    ui.hyperlink("https://rims-code.github.io/about/maintainers/");
+                });
+                ui.add_space(VERTICAL_SPACE);
 
                 ui.horizontal(|ui| {
                     if ui.button("Submit via GitHub")
@@ -779,7 +787,7 @@ fn execute<F: Future<Output = ()> + 'static>(f: F) {
 
 // Constants to configure the App:
 const INTRO_MESSAGE: &str = "You can use this form to submit a new resonance ionization scheme \
-to the database.";
+to the database. For help, see the expandable sections at the beginning of each category and hover over individual descriptions and fields for more information.";
 
 const USAGE_MESSAGE_GENERAL: &str = "If you have a config file that from the RIMSSchemeDrawer \
 software, you can paste and apply it first. Then fill out any additional information you want to submit in \
@@ -811,6 +819,11 @@ Values can be separated by comma, semicolon, or space.";
 const USAGE_MESSAGE_REFERENCE: &str = "You can either provide only a `doi` (leaving the author and year fields empty) \
 or you can provide a URL to an article as well as an author name and year. \
 Please provide the author name in the same way as it should be displayed, e.g., \"Chrysalidis et al.\".";
+
+const USAGE_MESSAGE_SUBMISSION: &str = "If you have a GitHub account, please press the \"Submit via GitHub\" button. \n \
+Otherwise, you can submit via e-mail. If you have an e-mail client configured on your system, press the \"Submit via E-Mail\" button. \n \
+Alternatively or if both options above fail, you can download the configuration file and send it to us via e-mail. \
+A list of current maintainers can be found on the following website:";
 
 const COL_MIN_WIDTH: f32 = 120.0;
 const TEXT_INPUT_WIDTH: f32 = f32::INFINITY;
