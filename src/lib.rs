@@ -5,6 +5,8 @@ use std::str::FromStr;
 use serde_json::{json, ser::to_string_pretty, Value};
 use strum_macros::EnumIter;
 
+use urlencoding::encode;
+
 mod app;
 
 pub use app::TemplateApp;
@@ -637,7 +639,9 @@ fn create_gh_issue(body: &str, element: &Elements) -> String {
 
     format!(
         "https://github.com/RIMS-Code/rims-code.github.io/issues/new?labels={}&title={}&body={}",
-        label, title, body
+        label,
+        encode(&title),
+        encode(body)
     )
 }
 
