@@ -663,9 +663,9 @@ fn create_json_output(app_entries: &TemplateApp) -> Result<String, String> {
                 "element": format!("{:?}", app_entries.scheme_element),
                 "lasers": app_entries.scheme_lasers.to_string(),
                 "last_step_to_ip": app_entries.scheme_last_step_to_ip,
-                "gs_term": app_entries.scheme_gs.term_symbol,
+                "gs_term": strip_latex_dollars(&app_entries.scheme_gs.term_symbol),
                 "gs_level": app_entries.scheme_gs.get_level()?,
-                "ip_term": app_entries.scheme_ip_term_symbol,
+                "ip_term": strip_latex_dollars(&app_entries.scheme_ip_term_symbol),
                 "unit": scheme_unit_json,
             },
         },
@@ -675,10 +675,11 @@ fn create_json_output(app_entries: &TemplateApp) -> Result<String, String> {
 
     for (it, val) in app_entries.scheme_transitions.iter().enumerate() {
         let level = val.get_level()?;
+        let term_symbol_stripped = strip_latex_dollars(&val.term_symbol);
         if !level.is_empty() {
             json_out["rims_scheme"]["scheme"][format!("step_level{}", it)] = Value::from(level);
             json_out["rims_scheme"]["scheme"][format!("step_term{}", it)] =
-                Value::from(val.term_symbol.clone());
+                Value::from(term_symbol_stripped);
             json_out["rims_scheme"]["scheme"][format!("trans_strength{}", it)] =
                 Value::from(val.get_transition_strength()?);
             json_out["rims_scheme"]["scheme"][format!("step_forbidden{}", it)] =
@@ -938,6 +939,14 @@ fn is_doi(inp: &str) -> bool {
     inp.chars().filter(|c| *c == '/').count() == 1
 }
 
+/// Strip $ signs from beginning and end of a &str.
+/// This is used to remove LaTeX math mode from strings.
+fn strip_latex_dollars(inp: &str) -> &str {
+    let mut inp_ret = inp.strip_prefix('$').unwrap_or(inp);
+    inp_ret = inp_ret.strip_suffix('$').unwrap_or(inp_ret);
+    inp_ret
+}
+
 #[cfg(test)]
 #[test]
 fn test_parse_element() {
@@ -978,4 +987,19 @@ fn test_is_doi() {
     assert!(is_doi(doi_good));
     let doi_bad = "https://doi.org/10.500/123456789";
     assert!(!is_doi(doi_bad));
+}
+
+#[test]
+fn test_strp_latex_dollars() {
+    let inp1 = "$H$";
+    assert_eq!(strip_latex_dollars(inp1), "H");
+
+    let inp2 = "$H";
+    assert_eq!(strip_latex_dollars(inp2), "H");
+
+    let inp3 = "H$";
+    assert_eq!(strip_latex_dollars(inp3), "H");
+
+    let inp4 = "H";
+    assert_eq!(strip_latex_dollars(inp4), "H");
 }

@@ -792,6 +792,8 @@ It should contain at a minimum the element, the ground state, as well as one or 
 First select the units that you would like to use (nm or cm¯¹). Then fill out the \
 levels, optional term symbols, transmission strengths (in s¯¹), \
 and whether the level is a low-lying level or if the transition is forbidden. \
+Simple term symbols can be entered directly, e.g., \"3F2\" will render to ³F₂. \
+More complicated term symbols can be entered in LaTeX formatting, i.e., \"5d^{2}5s^{2} (^{3}F_{2})\". \
 Finally, select the lasers that were used for this scheme. \
 Further information can always be provided in the notes.";
 
