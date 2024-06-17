@@ -47,7 +47,7 @@ pub struct TemplateApp {
     #[serde(skip)]
     reference_id: String,
     #[serde(skip)]
-    reference_authors: String,
+    reference_author: String,
     #[serde(skip)]
     reference_year: String,
     #[serde(skip)]
@@ -96,7 +96,7 @@ impl Default for TemplateApp {
             rimsschemedrawer_in: String::new(),
             text_channel: channel(),
             reference_id: String::new(),
-            reference_authors: String::new(),
+            reference_author: String::new(),
             reference_year: String::new(),
             error_reference: String::new(),
             error_rimsschemedrawer_in: String::new(),
@@ -310,8 +310,8 @@ impl eframe::App for TemplateApp {
                 ui.add_space(VERTICAL_SPACE);
 
                 // Last step to IP
-                ui.checkbox(&mut self.scheme_last_step_to_ip, "Draw last step to IP?")
-                    .on_hover_text("Check this box if the last step should be drawn to the ionization potential.");
+                ui.checkbox(&mut self.scheme_last_step_to_ip, "Unknown ionization step?")
+                    .on_hover_text("Check this box if the ionization step is unknown and the last transition should be drawn to the ionization potential with a hollow arrow.");
                 ui.add_space(VERTICAL_SPACE);
 
                 // Lasers
@@ -527,7 +527,7 @@ impl eframe::App for TemplateApp {
                             .on_hover_text("Enter the DOI only or an URL to the reference here.");
                         ui.end_row();
                         ui.label("Enter author names to be displayed:");
-                        ui.text_edit_singleline(&mut self.reference_authors)
+                        ui.text_edit_singleline(&mut self.reference_author)
                             .on_hover_text("Example: Wendt, Shulaker and Savina, Rothe et al.");
                         ui.end_row();
                         ui.label("Enter year (4 digits):");
@@ -552,7 +552,7 @@ impl eframe::App for TemplateApp {
                     let mut reference_to_write: Option<ReferenceEntry> = None;
 
                     if !self.reference_id.is_empty() {
-                        if self.reference_authors.is_empty() || self.reference_year.is_empty() {  // so we have a doi
+                        if self.reference_author.is_empty() || self.reference_year.is_empty() {  // so we have a doi
                             if is_doi(&self.reference_id) {
                                 reference_to_write = Some(ReferenceEntry::new_from_doi(&self.reference_id));
                             } else {
@@ -560,7 +560,7 @@ impl eframe::App for TemplateApp {
                             }
                         } else {  // so we have an URL with entries everywhere
                             match self.reference_year.parse::<usize>() {
-                                Ok(year) => reference_to_write = Some(ReferenceEntry::new_from_url(&self.reference_id, &self.reference_authors, year)),
+                                Ok(year) => reference_to_write = Some(ReferenceEntry::new_from_url(&self.reference_id, &self.reference_author, year)),
                                 Err(_) => self.error_reference = "Cannot parse year. Please check it is a number.".into(),
                             };
                         };
@@ -574,7 +574,7 @@ impl eframe::App for TemplateApp {
                             None => self.references.push(entry)
                         };
                         self.reference_id.clear();
-                        self.reference_authors.clear();
+                        self.reference_author.clear();
                         self.reference_year.clear();
                         self.error_reference.clear();
                     }
@@ -598,10 +598,10 @@ impl eframe::App for TemplateApp {
                         .show(ui, |ui| {
                             for (it, val) in self.references.clone().iter().enumerate() {
                                 // Label
-                                let lbl_hover_text = if val.year == 0 && val.authors.is_empty() {
+                                let lbl_hover_text = if val.year == 0 && val.author.is_empty() {
                                     format!("https://doi.org/{}", val.id)
                                 } else {
-                                    format!("{} ({})", val.authors, val.year)
+                                    format!("{} ({})", val.author, val.year)
                                 };
                                 ui.label(&val.id).on_hover_text(lbl_hover_text);
 
@@ -625,7 +625,7 @@ impl eframe::App for TemplateApp {
                                 // Edit button
                                 if ui.button("Edit entry").clicked() {
                                     self.reference_id.clone_from(&val.id);
-                                    self.reference_authors.clone_from(&val.authors);
+                                    self.reference_author.clone_from(&val.author);
                                     self.reference_year = match val.year {
                                         0 => String::new(),
                                         _ => val.year.to_string(),
@@ -654,6 +654,14 @@ impl eframe::App for TemplateApp {
                 ui.add_space(VERTICAL_SPACE);
 
                 ui.separator();
+                ui.add_space(VERTICAL_SPACE);
+
+
+                ui.collapsing("How to submit?", |ui| {
+                    ui.label(RichText::new(USAGE_MESSAGE_SUBMISSION));
+                    ui.hyperlink("https://rims-code.github.io/about/maintainers/");
+                });
+                ui.add_space(VERTICAL_SPACE);
 
                 ui.horizontal(|ui| {
                     if ui.button("Submit via GitHub")
@@ -779,7 +787,7 @@ fn execute<F: Future<Output = ()> + 'static>(f: F) {
 
 // Constants to configure the App:
 const INTRO_MESSAGE: &str = "You can use this form to submit a new resonance ionization scheme \
-to the database.";
+to the database. For help, see the expandable sections at the beginning of each category and hover over individual descriptions and fields for more information.";
 
 const USAGE_MESSAGE_GENERAL: &str = "If you have a config file that from the RIMSSchemeDrawer \
 software, you can paste and apply it first. Then fill out any additional information you want to submit in \
@@ -792,6 +800,8 @@ It should contain at a minimum the element, the ground state, as well as one or 
 First select the units that you would like to use (nm or cm¯¹). Then fill out the \
 levels, optional term symbols, transmission strengths (in s¯¹), \
 and whether the level is a low-lying level or if the transition is forbidden. \
+Simple term symbols can be entered directly, e.g., \"3F2\" will render to ³F₂. \
+More complicated term symbols can be entered in LaTeX formatting, i.e., \"5d^{2}5s^{2} (^{3}F_{2})\". \
 Finally, select the lasers that were used for this scheme. \
 Further information can always be provided in the notes.";
 
@@ -809,6 +819,11 @@ Values can be separated by comma, semicolon, or space.";
 const USAGE_MESSAGE_REFERENCE: &str = "You can either provide only a `doi` (leaving the author and year fields empty) \
 or you can provide a URL to an article as well as an author name and year. \
 Please provide the author name in the same way as it should be displayed, e.g., \"Chrysalidis et al.\".";
+
+const USAGE_MESSAGE_SUBMISSION: &str = "If you have a GitHub account, please press the \"Submit via GitHub\" button. \n \
+Otherwise, you can submit via e-mail. If you have an e-mail client configured on your system, press the \"Submit via E-Mail\" button. \n \
+Alternatively or if both options above fail, you can download the configuration file and send it to us via e-mail. \
+A list of current maintainers can be found on the following website:";
 
 const COL_MIN_WIDTH: f32 = 120.0;
 const TEXT_INPUT_WIDTH: f32 = f32::INFINITY;

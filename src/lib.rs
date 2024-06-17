@@ -583,7 +583,7 @@ impl Transition {
 #[derive(Clone, Debug, serde::Deserialize, serde::Serialize)]
 pub struct ReferenceEntry {
     id: String,
-    authors: String,
+    author: String,
     year: usize,
 }
 
@@ -591,21 +591,21 @@ impl ReferenceEntry {
     fn new_from_doi(doi: &str) -> Self {
         ReferenceEntry {
             id: doi.into(),
-            authors: String::new(),
+            author: String::new(),
             year: 0,
         }
     }
 
-    fn new_from_url(url: &str, authors: &str, year: usize) -> Self {
+    fn new_from_url(url: &str, author: &str, year: usize) -> Self {
         ReferenceEntry {
             id: url.into(),
-            authors: authors.into(),
+            author: author.into(),
             year,
         }
     }
 
     fn get_url(&self) -> String {
-        if self.authors.is_empty() && self.year == 0 {
+        if self.author.is_empty() && self.year == 0 {
             format!("https://doi.org/{}", self.id)
         } else {
             self.id.clone()
@@ -663,9 +663,9 @@ fn create_json_output(app_entries: &TemplateApp) -> Result<String, String> {
                 "element": format!("{:?}", app_entries.scheme_element),
                 "lasers": app_entries.scheme_lasers.to_string(),
                 "last_step_to_ip": app_entries.scheme_last_step_to_ip,
-                "gs_term": app_entries.scheme_gs.term_symbol,
+                "gs_term": strip_latex_dollars(&app_entries.scheme_gs.term_symbol),
                 "gs_level": app_entries.scheme_gs.get_level()?,
-                "ip_term": app_entries.scheme_ip_term_symbol,
+                "ip_term": strip_latex_dollars(&app_entries.scheme_ip_term_symbol),
                 "unit": scheme_unit_json,
             },
         },
@@ -675,10 +675,11 @@ fn create_json_output(app_entries: &TemplateApp) -> Result<String, String> {
 
     for (it, val) in app_entries.scheme_transitions.iter().enumerate() {
         let level = val.get_level()?;
+        let term_symbol_stripped = strip_latex_dollars(&val.term_symbol);
         if !level.is_empty() {
             json_out["rims_scheme"]["scheme"][format!("step_level{}", it)] = Value::from(level);
             json_out["rims_scheme"]["scheme"][format!("step_term{}", it)] =
-                Value::from(val.term_symbol.clone());
+                Value::from(term_symbol_stripped);
             json_out["rims_scheme"]["scheme"][format!("trans_strength{}", it)] =
                 Value::from(val.get_transition_strength()?);
             json_out["rims_scheme"]["scheme"][format!("step_forbidden{}", it)] =
@@ -834,7 +835,7 @@ fn load_config_file(app_entries: &mut TemplateApp) -> Result<(), String> {
                 Some(s) => s,
                 None => continue,
             };
-            let rauth = r["authors"].as_str().unwrap_or("");
+            let rauth = r["author"].as_str().unwrap_or("");
             let ryear = match r["year"].as_u64() {
                 Some(y) => y as usize,
                 None => 0_usize,
@@ -938,6 +939,14 @@ fn is_doi(inp: &str) -> bool {
     inp.chars().filter(|c| *c == '/').count() == 1
 }
 
+/// Strip $ signs from beginning and end of a &str.
+/// This is used to remove LaTeX math mode from strings.
+fn strip_latex_dollars(inp: &str) -> &str {
+    let mut inp_ret = inp.strip_prefix('$').unwrap_or(inp);
+    inp_ret = inp_ret.strip_suffix('$').unwrap_or(inp_ret);
+    inp_ret
+}
+
 #[cfg(test)]
 #[test]
 fn test_parse_element() {
@@ -978,4 +987,19 @@ fn test_is_doi() {
     assert!(is_doi(doi_good));
     let doi_bad = "https://doi.org/10.500/123456789";
     assert!(!is_doi(doi_bad));
+}
+
+#[test]
+fn test_strp_latex_dollars() {
+    let inp1 = "$H$";
+    assert_eq!(strip_latex_dollars(inp1), "H");
+
+    let inp2 = "$H";
+    assert_eq!(strip_latex_dollars(inp2), "H");
+
+    let inp3 = "H$";
+    assert_eq!(strip_latex_dollars(inp3), "H");
+
+    let inp4 = "H";
+    assert_eq!(strip_latex_dollars(inp4), "H");
 }
