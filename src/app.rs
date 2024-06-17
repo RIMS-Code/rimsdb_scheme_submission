@@ -310,8 +310,8 @@ impl eframe::App for TemplateApp {
                 ui.add_space(VERTICAL_SPACE);
 
                 // Last step to IP
-                ui.checkbox(&mut self.scheme_last_step_to_ip, "Draw last step to IP?")
-                    .on_hover_text("Check this box if the last step should be drawn to the ionization potential.");
+                ui.checkbox(&mut self.scheme_last_step_to_ip, "Unknown ionization step?")
+                    .on_hover_text("Check this box if the ionization step is unknown and the last transition should be drawn to the ionization potential with a hollow arrow.");
                 ui.add_space(VERTICAL_SPACE);
 
                 // Lasers
