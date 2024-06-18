@@ -1009,9 +1009,15 @@ fn test_replace_linebreak() {
     assert_eq!(replace_linebreak(""), "");
     assert_eq!(replace_linebreak("asdf"), "asdf");
     assert_eq!(replace_linebreak("\n"), "  \n");
-    assert_eq!(replace_linebreak("asdf\nbsdf\ncsdf      \n"), "asdf  \nbsdf  \ncsdf  \n");
+    assert_eq!(
+        replace_linebreak("asdf\nbsdf\ncsdf      \n"),
+        "asdf  \nbsdf  \ncsdf  \n"
+    );
     assert_eq!(replace_linebreak("asdf\n\n"), "asdf  \n  \n");
-    assert_eq!(replace_linebreak("asdf\r\nbsdf\ncsdf      \r\n"), "asdf  \nbsdf  \ncsdf  \n");
+    assert_eq!(
+        replace_linebreak("asdf\r\nbsdf\ncsdf      \r\n"),
+        "asdf  \nbsdf  \ncsdf  \n"
+    );
 }
 
 #[test]
