@@ -661,7 +661,7 @@ fn create_json_output(app_entries: &TemplateApp) -> Result<String, String> {
 
     // create the json file
     let mut json_out = json!({
-        "notes": app_entries.notes,
+        "notes": replace_linebreak(&app_entries.notes),
         "rims_scheme": {
             "scheme": {
                 "element": format!("{:?}", app_entries.scheme_element),
@@ -702,7 +702,7 @@ fn create_json_output(app_entries: &TemplateApp) -> Result<String, String> {
 
         let mut json_tmp = json!({
             "title": val.title,
-            "notes": val.notes,
+            "notes": replace_linebreak(&val.notes),
             "unit": sat_unit_json,
             "fit": val.fit,
             "data": {
@@ -943,6 +943,13 @@ fn is_doi(inp: &str) -> bool {
     inp.chars().filter(|c| *c == '/').count() == 1
 }
 
+/// Replace linebreaks with two spaces and a linebreak.
+/// This is used to format for proper markdown handling.
+fn replace_linebreak(inp: &str) -> String {
+    let re = regex::Regex::new(r" *\r?\n").unwrap();
+    re.replace_all(inp, "  \n").to_string()
+}
+
 /// Strip $ signs from beginning and end of a &str.
 /// This is used to remove LaTeX math mode from strings.
 fn strip_latex_dollars(inp: &str) -> &str {
@@ -991,6 +998,20 @@ fn test_is_doi() {
     assert!(is_doi(doi_good));
     let doi_bad = "https://doi.org/10.500/123456789";
     assert!(!is_doi(doi_bad));
+}
+
+#[test]
+fn test_replace_linebreak() {
+    assert_eq!(replace_linebreak("asdf\nbsdf"), "asdf  \nbsdf");
+    assert_eq!(replace_linebreak("asdf  \nbsdf"), "asdf  \nbsdf");
+    assert_eq!(replace_linebreak("asdf \nbsdf"), "asdf  \nbsdf");
+    assert_eq!(replace_linebreak("asdf       \nbsdf"), "asdf  \nbsdf");
+    assert_eq!(replace_linebreak(""), "");
+    assert_eq!(replace_linebreak("asdf"), "asdf");
+    assert_eq!(replace_linebreak("\n"), "  \n");
+    assert_eq!(replace_linebreak("asdf\nbsdf\ncsdf      \n"), "asdf  \nbsdf  \ncsdf  \n");
+    assert_eq!(replace_linebreak("asdf\n\n"), "asdf  \n  \n");
+    assert_eq!(replace_linebreak("asdf\r\nbsdf\ncsdf      \r\n"), "asdf  \nbsdf  \ncsdf  \n");
 }
 
 #[test]
