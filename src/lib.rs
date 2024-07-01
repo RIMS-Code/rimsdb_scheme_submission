@@ -918,7 +918,7 @@ fn load_config_file(app_entries: &mut TemplateApp) -> Result<(), String> {
 /// Take a data string and split it into a vector of strings according to a list of delimiters.
 fn split_data_string(data: &str) -> Vec<String> {
     let xsplit: Vec<String> = data
-        .split(&[' ', ',', ':', '-', '\t', '\n', '\r'])
+        .split(&[' ', ',', ':', '\t', '\n', '\r'])
         .filter(|&r| !r.is_empty())
         .map(|r| r.to_string())
         .collect();
@@ -1033,4 +1033,23 @@ fn test_strp_latex_dollars() {
 
     let inp4 = "H";
     assert_eq!(strip_latex_dollars(inp4), "H");
+}
+
+#[test]
+fn test_data_string_to_vec_f64() {
+    let data_exp = vec![100., 200.];
+    let data_strs = vec!["1E+2, 2E+2", "1E2, 2E2", "1e2, 2e2"];
+    for data_str in data_strs {
+        let data_vec = data_string_to_vec_f64(data_str, "test").unwrap();
+
+        assert_eq!(data_vec, data_exp);
+    }
+
+    let data_exp = vec![0.01, 0.02];
+    let data_strs = vec!["1E-2, 2E-2", "1e-2, 2e-2"];
+    for data_str in data_strs {
+        let data_vec = data_string_to_vec_f64(data_str, "test").unwrap();
+
+        assert_eq!(data_vec, data_exp);
+    }
 }
