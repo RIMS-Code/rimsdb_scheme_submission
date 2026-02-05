@@ -1,0 +1,10 @@
+{
+  "name": "Resonance Ionization Scheme Submission",
+  "short_name": "scheme_submission",
+  "lang": "en-US",
+  "id": "/index.html",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "white",
+  "theme_color": "white"
+}
